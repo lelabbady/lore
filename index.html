@@ -1,0 +1,2078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>so you want a whole mouse brain connectome/</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Firebase (for shared comments — configure FIREBASE_CONFIG in the script below) -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    /* Allen Institute brand palette */
+    --bg:        #F3F0E8;  /* Page 1 warm off-white */
+    --bg2:       #DED9D1;  /* Page 2 warm gray */
+    --surface:   #FFFFFF;
+    --border:    #DED9D1;
+    --text:      #000000;
+    --muted:     #737373;  /* Gray 2 */
+    --light:     #AAA39F;  /* Gray 1 */
+
+    /* Brand primaries */
+    --blue:      #6464FF;
+    --violet:    #8246E1;
+
+    /* Brand accents */
+    --orange:    #FF6E00;
+    --teal:      #00A59B;
+    --maroon:    #CD0F55;
+    --ochre:     #DC9600;
+    --green:     #CDEB05;
+    --yellow:    #FFEB23;
+    --rose:      #FF00FF;
+
+    --accent:    var(--blue);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    font-size: 15px;
+  }
+
+  /* HEADER — black, bold, brand-language style */
+  header {
+    background: #000000;
+    padding: 32px 40px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-inner { max-width: 1140px; margin: 0 auto; }
+
+  .site-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: #FFFFFF;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+  .site-title .title-highlight { color: var(--blue); }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  #search {
+    flex: 1;
+    min-width: 200px;
+    max-width: 300px;
+    padding: 7px 13px;
+    border: 1px solid #333;
+    border-radius: 0;
+    font-size: 0.82rem;
+    font-family: inherit;
+    background: #111;
+    color: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #search:focus { border-color: var(--blue); }
+  #search::placeholder { color: #555; }
+
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .filter-btn {
+    padding: 6px 13px;
+    border: 1px solid #333;
+    border-radius: 0;
+    background: transparent;
+    color: #999;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+    text-transform: lowercase;
+  }
+  .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  .suggest-btn {
+    margin-left: auto;
+    padding: 7px 16px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 0;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.12s;
+  }
+  .suggest-btn:hover { background: var(--violet); }
+
+  /* MAIN */
+  main {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 28px 40px;
+  }
+
+  .results-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.03em;
+    margin-bottom: 20px;
+    text-transform: lowercase;
+    border-left: 2px solid var(--blue);
+    padding-left: 10px;
+  }
+
+  /* GRID */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 2px;
+  }
+
+  /* CARD */
+  .card {
+    background: var(--surface);
+    border: none;
+    border-top: 3px solid transparent;
+    padding: 22px 24px;
+    transition: border-top-color 0.15s;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .card:hover { border-top-color: var(--blue); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .card-type {
+    display: inline-block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    white-space: nowrap;
+  }
+  .type-article     { background: #eeeeff; color: var(--blue); }
+  .type-book        { background: #f0eaff; color: var(--violet); }
+  .type-podcast     { background: #fff0e5; color: var(--orange); }
+  .type-video       { background: #fff8e0; color: var(--ochre); }
+  .type-documentary { background: #e5f8f7; color: var(--teal); }
+  .type-talk        { background: #fce8ef; color: var(--maroon); }
+
+  .card-year {
+    font-size: 0.72rem;
+    color: var(--light);
+    white-space: nowrap;
+    margin-top: 1px;
+    font-weight: 500;
+  }
+
+  .card-title {
+    font-size: 0.97rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .card-title a { color: inherit; text-decoration: none; }
+  .card-title a:hover { color: var(--blue); }
+
+  .card-authors {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  .card-desc {
+    font-size: 0.83rem;
+    color: #3a3a3a;
+    line-height: 1.6;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+  }
+  .tag {
+    font-size: 0.68rem;
+    padding: 2px 7px;
+    background: var(--bg);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+    letter-spacing: 0.02em;
+    border-radius: 0;
+  }
+  .tag:hover { background: var(--bg2); color: var(--text); }
+
+  .no-results {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 20px;
+    font-size: 0.9rem;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
+    align-items: center;
+  }
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 11px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-size: 0.72rem;
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    color: var(--muted);
+    border-radius: 0;
+  }
+  .action-btn:hover { border-color: var(--text); color: var(--text); }
+  .action-btn.liked {
+    background: var(--blue);
+    border-color: var(--blue);
+    color: #fff;
+  }
+  .action-btn.flagged-btn-active {
+    background: var(--ochre);
+    border-color: var(--ochre);
+    color: #fff;
+  }
+  .card.is-flagged { opacity: 0.4; border-top-color: var(--ochre); }
+  .card.is-flagged:hover { opacity: 0.65; }
+  .flagged-badge {
+    font-size: 0.65rem;
+    color: var(--ochre);
+    border: 1px solid var(--ochre);
+    padding: 1px 7px;
+    margin-left: auto;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  footer {
+    text-align: center;
+    padding: 32px 40px;
+    font-size: 0.72rem;
+    color: var(--light);
+    border-top: 1px solid var(--border);
+    margin-top: 2px;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+  }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--blue); }
+
+  /* ── SIDEBAR ─────────────────────────────────────────────────────── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+
+  .sidebar {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 400px;
+    background: var(--surface);
+    z-index: 201;
+    transform: translateX(100%);
+    transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -6px 0 32px rgba(0,0,0,0.15);
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    background: #000;
+    padding: 20px 20px 18px;
+    flex-shrink: 0;
+  }
+  .sidebar-close {
+    float: right;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+    font-family: inherit;
+    margin-top: 1px;
+  }
+  .sidebar-close:hover { color: #fff; }
+  .sidebar-type {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 6px;
+    clear: both;
+  }
+  .sidebar-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  .sidebar-authors {
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 5px;
+    font-style: italic;
+  }
+
+  /* description block in sidebar */
+  .sidebar-desc-block {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .sidebar-desc-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+  .sidebar-desc-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--light);
+  }
+  .edit-desc-btn {
+    background: none; border: none;
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--blue);
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    padding: 0;
+  }
+  .edit-desc-btn:hover { text-decoration: underline; }
+  .sidebar-desc-text {
+    font-size: 0.8rem;
+    color: #3a3a3a;
+    line-height: 1.55;
+  }
+  .sidebar-desc-text.is-edited { border-left: 2px solid var(--teal); padding-left: 8px; }
+  .desc-edit-area { display: none; flex-direction: column; gap: 7px; }
+  .desc-edit-area.open { display: flex; }
+  .desc-edit-textarea {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--blue);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    border-radius: 0;
+    line-height: 1.55;
+  }
+  .desc-edit-actions { display: flex; gap: 7px; justify-content: flex-end; }
+  .desc-save-btn {
+    padding: 4px 14px;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    border-radius: 0;
+  }
+  .desc-save-btn:hover { background: #007a72; }
+  .desc-cancel-btn {
+    padding: 4px 12px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: lowercase;
+    cursor: pointer;
+    border-radius: 0;
+  }
+  .desc-cancel-btn:hover { color: var(--text); border-color: var(--text); }
+
+  .storage-note {
+    padding: 7px 16px;
+    font-size: 0.68rem;
+    color: #92400e;
+    background: #fffbeb;
+    border-bottom: 1px solid #fde68a;
+    text-align: center;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+
+  .sidebar-comments {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .comment {
+    border-left: 2px solid var(--border);
+    padding: 6px 0 6px 12px;
+  }
+  .comment-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .comment-name {
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .comment-time {
+    font-size: 0.66rem;
+    color: var(--light);
+    white-space: nowrap;
+  }
+  .comment-text {
+    font-size: 0.82rem;
+    color: #3a3a3a;
+    line-height: 1.55;
+    white-space: pre-wrap;
+  }
+  .no-comments {
+    font-size: 0.82rem;
+    color: var(--light);
+    text-align: center;
+    padding: 32px 0;
+    font-style: italic;
+  }
+
+  .sidebar-form {
+    padding: 14px 20px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .form-name {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.78rem;
+    color: var(--text);
+    outline: none;
+    margin-bottom: 8px;
+    border-radius: 0;
+  }
+  .form-name:focus { border-color: var(--blue); }
+  .form-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    min-height: 72px;
+    border-radius: 0;
+    line-height: 1.5;
+  }
+  .form-textarea:focus { border-color: var(--blue); }
+  .form-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    gap: 8px;
+  }
+  .form-hint { font-size: 0.67rem; color: var(--light); font-style: italic; }
+  .form-submit {
+    padding: 6px 18px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+  .form-submit:hover { background: var(--violet); }
+
+  /* make cards feel clickable */
+  .card { cursor: pointer; }
+
+  /* ── SUGGEST MODAL ───────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 300;
+    display: none;
+  }
+  .modal-overlay.open { display: block; }
+
+  .modal {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.97);
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    max-height: 90vh;
+    background: var(--surface);
+    z-index: 301;
+    display: none;
+    flex-direction: column;
+    transition: transform 0.15s;
+    overflow: hidden;
+  }
+  .modal.open { display: flex; transform: translate(-50%, -50%) scale(1); }
+
+  .modal-header {
+    background: #000;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .modal-header span {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.02em;
+    text-transform: lowercase;
+  }
+  .modal-close {
+    background: none; border: none;
+    color: #666; font-size: 1rem;
+    cursor: pointer; font-family: inherit;
+  }
+  .modal-close:hover { color: #fff; }
+
+  .modal-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .modal-tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.12s;
+    margin-bottom: -1px;
+  }
+  .modal-tab.active { color: var(--blue); border-bottom-color: var(--blue); background: var(--surface); }
+
+  .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .modal-input {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    border-radius: 0;
+  }
+  .modal-input:focus { border-color: var(--blue); }
+  .modal-select {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    border-radius: 0;
+    appearance: none;
+    cursor: pointer;
+  }
+  .modal-select:focus { border-color: var(--blue); }
+  .modal-textarea {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    min-height: 72px;
+    border-radius: 0;
+    line-height: 1.5;
+  }
+  .modal-textarea:focus { border-color: var(--blue); }
+  .url-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .url-row .modal-input { flex: 1; }
+  .fetch-btn {
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: lowercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+  .fetch-btn:hover { background: var(--blue); }
+  .fetch-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+  .url-preview {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    padding: 12px 14px;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .url-preview.visible { display: flex; }
+  .preview-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--light); }
+  .preview-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+  .preview-meta { font-size: 0.75rem; color: var(--muted); font-style: italic; }
+  .preview-desc { font-size: 0.78rem; color: #444; line-height: 1.5; }
+  .fetch-error { font-size: 0.78rem; color: var(--maroon); padding: 8px 0; }
+
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .modal-footer .modal-input { flex: 1; }
+  .submit-sug-btn {
+    padding: 8px 18px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-radius: 0;
+    white-space: nowrap;
+  }
+  .submit-sug-btn:hover { background: var(--violet); }
+
+  /* ── REVIEW BADGE ─────────────────────────────────────────────────── */
+  .review-btn {
+    padding: 6px 13px;
+    border: 1px solid var(--ochre);
+    background: transparent;
+    color: var(--ochre);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: lowercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    border-radius: 0;
+    white-space: nowrap;
+    display: none;
+  }
+  .review-btn:hover { background: var(--ochre); color: #fff; }
+  .review-btn.visible { display: inline-block; }
+
+  /* ── ADMIN / REVIEW PANEL ─────────────────────────────────────────── */
+  .admin-panel {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 400;
+    overflow-y: auto;
+    display: none;
+  }
+  .admin-panel.open { display: block; }
+  .admin-inner {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 32px 40px;
+  }
+  .admin-topbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 14px;
+  }
+  .admin-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .admin-close-btn {
+    background: none; border: none;
+    font-family: inherit; font-size: 0.78rem;
+    font-weight: 600; color: var(--muted);
+    cursor: pointer; text-transform: lowercase;
+    letter-spacing: 0.03em;
+  }
+  .admin-close-btn:hover { color: var(--text); }
+
+  .pending-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--blue);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pending-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .pending-card-title { font-size: 0.95rem; font-weight: 700; }
+  .pending-card-meta { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+  .pending-card-desc { font-size: 0.82rem; color: #444; line-height: 1.55; }
+  .pending-card-info { font-size: 0.7rem; color: var(--light); }
+  .pending-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .accept-btn {
+    padding: 5px 16px;
+    background: var(--teal);
+    color: #fff;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    border-radius: 0;
+  }
+  .accept-btn:hover { background: #007a72; }
+  .reject-btn {
+    padding: 5px 16px;
+    background: transparent;
+    color: var(--maroon);
+    border: 1px solid var(--maroon);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    border-radius: 0;
+  }
+  .reject-btn:hover { background: var(--maroon); color: #fff; }
+  .no-pending {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px 0;
+    font-size: 0.9rem;
+    font-style: italic;
+  }
+  .pending-url { font-size: 0.72rem; color: var(--blue); word-break: break-all; }
+  .pending-url a { color: inherit; }
+  .gen-btn {
+    padding: 4px 13px;
+    background: transparent;
+    color: var(--violet);
+    border: 1px solid var(--violet);
+    font-family: inherit;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: lowercase;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    border-radius: 0;
+    transition: all 0.12s;
+  }
+  .gen-btn:hover { background: var(--violet); color: #fff; }
+  .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pending-desc-label {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--light); margin-bottom: 4px;
+  }
+  .pending-desc-edit {
+    width: 100%;
+    padding: 8px 11px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--text);
+    outline: none;
+    resize: vertical;
+    min-height: 80px;
+    border-radius: 0;
+    line-height: 1.55;
+  }
+  .pending-desc-edit:focus { border-color: var(--blue); background: var(--surface); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="site-title">so you want a <span class="title-highlight">whole mouse brain</span> connectome</div>
+    <div class="controls">
+      <input type="text" id="search" placeholder="search titles, authors, keywords" oninput="render()">
+      <div class="filter-group" id="type-filters"></div>
+      <div class="filter-group" id="project-filters"></div>
+      <button class="filter-btn" id="sort-btn" onclick="toggleSort()">sort: most liked</button>
+      <button class="filter-btn" id="flagged-btn" onclick="toggleShowFlagged()">show flagged</button>
+      <button class="review-btn" id="review-btn" onclick="exportSuggestions()">export for review (<span id="pending-count">0</span>)</button>
+      <button class="suggest-btn" onclick="openSuggestModal()">+ suggest a resource</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="results-count" id="count"></div>
+  <div class="grid" id="grid"></div>
+  <div class="no-results" id="empty" style="display:none">No resources match your search. Try different keywords or filters.</div>
+</main>
+
+<footer>
+  a resource hub for the connectome team &nbsp;·&nbsp; <a href="mailto:leila.elabbady@alleninstitute.org?subject=Resource%20suggestion%20for%20the%20hub">suggest a resource</a>
+</footer>
+
+<!-- SUGGEST A RESOURCE MODAL -->
+<div class="modal-overlay" id="suggest-overlay" onclick="closeSuggestModal()"></div>
+<div class="modal" id="suggest-modal">
+  <div class="modal-header">
+    <span>suggest a resource</span>
+    <button class="modal-close" onclick="closeSuggestModal()">&#x2715;</button>
+  </div>
+  <div class="modal-tabs">
+    <button class="modal-tab active" id="tab-url-btn" onclick="switchSuggestTab('url')">from URL</button>
+    <button class="modal-tab" id="tab-manual-btn" onclick="switchSuggestTab('manual')">manual entry</button>
+  </div>
+  <div class="modal-body">
+
+    <!-- URL path -->
+    <div id="tab-url-panel">
+      <div class="url-row">
+        <input type="url" class="modal-input" id="sug-url" placeholder="paste a URL (article, book page, podcast…)">
+        <button class="fetch-btn" id="fetch-btn" onclick="fetchUrlMeta()">fetch info</button>
+      </div>
+      <div class="url-preview" id="url-preview">
+        <div class="preview-label">fetched preview — edit the summary if needed</div>
+        <div class="preview-title" id="preview-title"></div>
+        <div class="preview-meta" id="preview-meta"></div>
+        <textarea class="modal-textarea" id="preview-desc" placeholder="summary (edit before submitting)…" style="margin-top:6px; min-height:72px;"></textarea>
+      </div>
+      <div class="fetch-error" id="fetch-error" style="display:none"></div>
+    </div>
+
+    <!-- Manual path -->
+    <div id="tab-manual-panel" style="display:none">
+      <input type="text" class="modal-input" id="sug-title" placeholder="title">
+      <input type="text" class="modal-input" id="sug-authors" placeholder="author / maker / journal">
+      <select class="modal-select" id="sug-type">
+        <option value="">type…</option>
+        <option value="article">article</option>
+        <option value="book">book</option>
+        <option value="podcast">podcast</option>
+        <option value="documentary">documentary</option>
+        <option value="talk">talk</option>
+        <option value="video">video</option>
+      </select>
+      <input type="number" class="modal-input" id="sug-year" placeholder="year">
+      <textarea class="modal-textarea" id="sug-desc" placeholder="brief description (why is this relevant?)"></textarea>
+      <input type="url" class="modal-input" id="sug-link" placeholder="URL (optional)">
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <input type="text" class="modal-input" id="sug-submitter" placeholder="your name (optional)">
+    <button class="submit-sug-btn" onclick="submitSuggestion()">submit suggestion</button>
+  </div>
+</div>
+
+<!-- ADMIN / REVIEW PANEL (Ctrl+Shift+A — reject only; summaries generated externally) -->
+<div class="admin-panel" id="admin-panel">
+  <div class="admin-inner">
+    <div class="admin-topbar">
+      <div>
+        <div class="admin-title">pending suggestions</div>
+        <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">
+          Export this list, share with your curator, and they will add approved resources directly to the file.
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="gen-btn" onclick="exportSuggestions()">export JSON</button>
+        <button class="admin-close-btn" onclick="closeAdminPanel()">&#x2715; close</button>
+      </div>
+    </div>
+    <div id="admin-list"></div>
+  </div>
+</div>
+
+<!-- DISCUSSION SIDEBAR -->
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <button class="sidebar-close" onclick="closeSidebar()">&#x2715;</button>
+    <div class="sidebar-type" id="sb-type"></div>
+    <div class="sidebar-title" id="sb-title"></div>
+    <div class="sidebar-authors" id="sb-authors"></div>
+  </div>
+  <div id="sb-storage-note" class="storage-note" style="display:none">
+    Comments are stored locally only. Configure Firebase above to share with your team.
+  </div>
+  <div class="sidebar-desc-block">
+    <div class="sidebar-desc-row">
+      <span class="sidebar-desc-label">summary</span>
+      <button class="edit-desc-btn" onclick="toggleDescEdit()">edit</button>
+    </div>
+    <div class="sidebar-desc-text" id="sb-desc-text"></div>
+    <div class="desc-edit-area" id="desc-edit-area">
+      <textarea class="desc-edit-textarea" id="desc-edit-input"></textarea>
+      <div class="desc-edit-actions">
+        <button class="desc-cancel-btn" onclick="cancelDescEdit()">cancel</button>
+        <button class="desc-save-btn" onclick="saveDescEdit()">save</button>
+      </div>
+    </div>
+  </div>
+  <div class="sidebar-comments" id="sb-comments"></div>
+  <div class="sidebar-form">
+    <input type="text" class="form-name" id="sb-name" placeholder="your name (optional — leave blank for a random alias)">
+    <textarea class="form-textarea" id="sb-text" placeholder="add a comment or discussion note&#x2026;"></textarea>
+    <div class="form-row">
+      <span class="form-hint">ctrl+enter to post</span>
+      <button class="form-submit" onclick="submitComment()">post</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const RESOURCES = [
+  // ── USER-SPECIFIED ────────────────────────────────────────────────────
+  {
+    title: "Initial Sequencing and Analysis of the Human Genome",
+    authors: "Lander et al.",
+    year: 2001,
+    type: "article",
+    projects: ["Human Genome Project"],
+    tags: ["genomics", "sequencing", "milestone", "consortium", "data infrastructure"],
+    url: "https://www.nature.com/articles/35057062",
+    description: "The landmark Nature paper reporting the first draft sequence of the human genome by the International Human Genome Sequencing Consortium — one of the defining papers of modern biology."
+  },
+  {
+    title: "The Sequence of the Human Genome",
+    authors: "Venter et al.",
+    year: 2001,
+    type: "article",
+    projects: ["Human Genome Project"],
+    tags: ["genomics", "sequencing", "milestone", "competition vs. collaboration", "private sector"],
+    url: "https://www.science.org/doi/10.1126/science.1058040",
+    description: "Celera Genomics' competing Science paper, published simultaneously with the public consortium's Nature paper. Together these two papers tell the story of scientific competition, open data, and the race to map the genome."
+  },
+  {
+    title: "The Human Genome Project: Lessons from Large-Scale Biology",
+    authors: "Collins et al.",
+    year: 2003,
+    type: "article",
+    projects: ["Human Genome Project"],
+    tags: ["leadership", "large-scale biology", "lessons learned", "consortium", "open data"],
+    url: "https://www.science.org/doi/10.1126/science.1084564",
+    description: "Francis Collins and colleagues reflect on what the HGP taught us about organizing and executing big science — covering data sharing, international collaboration, and what comes next."
+  },
+  {
+    title: "Complicated Legacies: The Human Genome at 20",
+    authors: "Jones et al.",
+    year: 2021,
+    type: "article",
+    projects: ["Human Genome Project"],
+    tags: ["retrospective", "ethics", "equity", "genomics", "history of science"],
+    url: "https://www.science.org/doi/10.1126/science.abg5266",
+    description: "A critical 20-year retrospective on the HGP examining its scientific legacy alongside the more complicated questions of who has benefited, representation in genomic databases, and unfinished promises."
+  },
+  {
+    title: "Notes from a Revolution: Lessons from the Human Genome Project",
+    authors: "Issues in Science and Technology",
+    year: 2021,
+    type: "article",
+    projects: ["Human Genome Project"],
+    tags: ["lessons learned", "retrospective", "open science", "data sharing"],
+    url: "https://issues.org/notes-from-a-revolution-lessons-from-the-human-genome-project/",
+    description: "A reflection on what the HGP's organizational and scientific model taught the broader community — including lessons directly applicable to new large-scale brain mapping initiatives."
+  },
+  {
+    title: "How Big Things Get Done",
+    authors: "Bent Flyvbjerg & Dan Gardner",
+    year: 2023,
+    type: "book",
+    projects: ["General"],
+    tags: ["leadership", "megaprojects", "planning", "risk", "project management", "lessons learned"],
+    url: "https://www.howbigthingsgetdone.com/",
+    description: "An Oxford professor who has studied thousands of megaprojects — from the Sydney Opera House to the Large Hadron Collider — distills what separates the ones that succeed from the ones that spiral. Essential reading before embarking on any large-scale scientific endeavor."
+  },
+
+  // ── HUMAN GENOME PROJECT (additional) ────────────────────────────────
+  {
+    title: "The Language of God",
+    authors: "Francis Collins",
+    year: 2006,
+    type: "book",
+    projects: ["Human Genome Project"],
+    tags: ["memoir", "leadership", "genomics", "HGP director"],
+    url: "",
+    description: "The HGP director's personal account of leading the genome project, interweaving the scientific journey with reflections on leading one of history's most ambitious biological endeavors."
+  },
+  {
+    title: "The Genome Factor",
+    authors: "Dalton Conley & Jason Fletcher",
+    year: 2017,
+    type: "book",
+    projects: ["Human Genome Project"],
+    tags: ["social science", "genomics", "large-scale data", "consequences of big science"],
+    url: "",
+    description: "Examines how large-scale genomic data is reshaping social science — a downstream perspective on what the HGP unleashed."
+  },
+
+  // ── APOLLO / MOON LANDING ────────────────────────────────────────────
+  {
+    title: "Carrying the Fire",
+    authors: "Michael Collins",
+    year: 1974,
+    type: "book",
+    projects: ["Apollo Program"],
+    tags: ["memoir", "teamwork", "engineering", "risk", "NASA"],
+    url: "",
+    description: "Widely considered the best astronaut memoir ever written. Collins describes the extraordinary organizational, engineering, and human feat of Apollo 11 — essential reading on what it takes to actually land on the moon."
+  },
+  {
+    title: "The Right Stuff",
+    authors: "Tom Wolfe",
+    year: 1979,
+    type: "book",
+    projects: ["Apollo Program"],
+    tags: ["culture", "risk", "competition", "team dynamics", "history"],
+    url: "",
+    description: "Tom Wolfe's definitive account of the early US space program. A masterclass in exploring how culture, ego, competition, and institutional pressure shape large technical endeavors."
+  },
+  {
+    title: "Apollo 11 (documentary)",
+    authors: "Todd Douglas Miller",
+    year: 2019,
+    type: "documentary",
+    projects: ["Apollo Program"],
+    tags: ["archival footage", "teamwork", "engineering", "NASA", "milestone"],
+    url: "https://en.wikipedia.org/wiki/Apollo_11_(2019_film)",
+    description: "Made entirely from newly restored archival footage, this film immerses you in the real experience of the 1969 moon landing — the scale, the coordination, and the human drama of the mission control floor."
+  },
+
+  // ── CERN / LHC ──────────────────────────────────────────────────────
+  {
+    title: "Massive: The Missing Particle That Sparked the Greatest Hunt in Science",
+    authors: "Ian Sample",
+    year: 2010,
+    type: "book",
+    projects: ["CERN / LHC"],
+    tags: ["particle physics", "international collaboration", "data infrastructure", "history of science"],
+    url: "",
+    description: "The story behind the search for the Higgs boson and the construction of the LHC — a project involving 10,000+ scientists from 100+ countries and arguably the most complex instrument ever built."
+  },
+  {
+    title: "Particle Fever (documentary)",
+    authors: "Mark Levinson",
+    year: 2013,
+    type: "documentary",
+    projects: ["CERN / LHC"],
+    tags: ["particle physics", "discovery", "team dynamics", "milestone", "data"],
+    url: "https://particlefever.com/",
+    description: "A documentary following six physicists during the 2012 Higgs boson discovery. Captures beautifully the emotional and organizational reality of doing science at massive scale."
+  },
+
+  // ── BRAIN INITIATIVE ────────────────────────────────────────────────
+  {
+    title: "The BRAIN Initiative: Developing Technology to Catalyse Neuroscience Discovery",
+    authors: "Jorgenson et al.",
+    year: 2015,
+    type: "article",
+    projects: ["BRAIN Initiative"],
+    tags: ["neuroscience", "connectome", "technology", "federal consortium", "roadmap"],
+    url: "https://www.nature.com/articles/nrn4001",
+    description: "An overview of the goals, structure, and early progress of the U.S. BRAIN Initiative — a direct conceptual ancestor to large-scale connectome mapping projects."
+  },
+  {
+    title: "A Framework for Intelligence and Cortical Function Based on Grid Cells in the Neocortex",
+    authors: "Hawkins et al.",
+    year: 2019,
+    type: "article",
+    projects: ["BRAIN Initiative"],
+    tags: ["neuroscience", "connectome", "theory", "cortex"],
+    url: "https://www.frontiersin.org/articles/10.3389/fncir.2019.00023/full",
+    description: "Theoretical framing for why building complete circuit-level maps of the brain matters for understanding intelligence — motivational context for connectome-scale projects."
+  },
+
+  // ── HUMAN CELL ATLAS ────────────────────────────────────────────────
+  {
+    title: "The Human Cell Atlas",
+    authors: "Regev et al.",
+    year: 2017,
+    type: "article",
+    projects: ["Human Cell Atlas"],
+    tags: ["single-cell", "consortium", "data infrastructure", "atlas", "open data"],
+    url: "https://elifesciences.org/articles/27041",
+    description: "The founding white paper of the Human Cell Atlas — an international effort to map all ~37 trillion human cells. Directly analogous in structure and ambition to brain atlas projects."
+  },
+  {
+    title: "Human Cell Atlas — Building a Map of Every Human Cell",
+    authors: "Aviv Regev (HHMI Janelia Lecture)",
+    year: 2019,
+    type: "talk",
+    projects: ["Human Cell Atlas"],
+    tags: ["single-cell", "atlas", "consortium", "data strategy", "leadership"],
+    url: "",
+    description: "Aviv Regev lays out the scientific and organizational vision for the Human Cell Atlas — a compelling talk on how to coordinate large data-intensive biology."
+  },
+
+  // ── CONNECTOMICS ───────────────────────────────────────────────────
+  {
+    title: "A Complete Electron Microscopy Volume of the Brain of Adult Drosophila melanogaster",
+    authors: "Zheng et al.",
+    year: 2018,
+    type: "article",
+    projects: ["Connectomics"],
+    tags: ["connectome", "electron microscopy", "fly brain", "milestone", "data infrastructure"],
+    url: "https://www.sciencedirect.com/science/article/pii/S0092867418307876",
+    description: "The first complete synaptic-resolution volume of an adult fly brain — a proof-of-concept milestone that set the stage for larger vertebrate connectome efforts."
+  },
+  {
+    title: "Reconstruction of Motor Control Circuits in Adult Drosophila Using Automated Transmission Electron Microscopy",
+    authors: "Dorkenwald et al. (FlyWire)",
+    year: 2022,
+    type: "article",
+    projects: ["Connectomics"],
+    tags: ["connectome", "proofreading", "community science", "AI", "open data"],
+    url: "",
+    description: "The FlyWire connectome paper describes an open, community-driven model for proofreading connectome data — a template for citizen science at scale."
+  },
+  {
+    title: "The MICrONS Cubic Millimeter Dataset",
+    authors: "MICrONS Consortium",
+    year: 2021,
+    type: "article",
+    projects: ["Connectomics"],
+    tags: ["mouse cortex", "connectome", "machine learning", "electron microscopy", "consortium"],
+    url: "https://www.nature.com/articles/s41586-025-08790-w",
+    description: "A landmark multi-institutional dataset mapping a cubic millimeter of mouse visual cortex at synaptic resolution — the largest mammalian connectome dataset to date at time of publication."
+  },
+
+  // ── GENERAL LARGE-SCALE SCIENCE ─────────────────────────────────────
+  {
+    title: "Big Science: Ernest Lawrence and the Invention That Launched the Military-Industrial Complex",
+    authors: "Michael Hiltzik",
+    year: 2015,
+    type: "book",
+    projects: ["General"],
+    tags: ["history of science", "big science", "funding", "leadership", "institutions"],
+    url: "",
+    description: "The origin story of 'big science' itself — how Lawrence's cyclotron at Berkeley created the template for large, well-funded, team-driven science that all modern consortia descend from."
+  },
+  {
+    title: "The Idea Factory: Bell Labs and the Great Age of American Innovation",
+    authors: "Jon Gertner",
+    year: 2012,
+    type: "book",
+    projects: ["General"],
+    tags: ["culture", "institutions", "innovation", "teams", "management"],
+    url: "",
+    description: "Bell Labs produced the transistor, information theory, lasers, and Unix — all from one institution. A masterclass in how organizational culture drives breakthrough science."
+  },
+  {
+    title: "The Dream Machine: J.C.R. Licklider and the Revolution That Made Computing Personal",
+    authors: "M. Mitchell Waldrop",
+    year: 2001,
+    type: "book",
+    projects: ["General"],
+    tags: ["computing", "DARPA", "vision", "leadership", "collaboration"],
+    url: "",
+    description: "How ARPA (now DARPA) funded a network of researchers who invented the internet. A compelling study in how distributed, mission-driven funding structures accelerate transformative science."
+  },
+  {
+    title: "Mindscape 298: Jeff Lichtman on the Wiring Diagram of the Brain",
+    authors: "Sean Carroll's Mindscape (podcast)",
+    year: 2024,
+    type: "podcast",
+    projects: ["Connectomics"],
+    tags: ["connectome", "neuroscience", "accessible", "interview", "Harvard"],
+    url: "https://www.preposterousuniverse.com/podcast/2024/12/09/298-jeff-lichtman-on-the-wiring-diagram-of-the-brain/",
+    description: "Harvard's Jeff Lichtman — co-inventor of Brainbow and leader of large-scale connectome efforts — talks with physicist Sean Carroll about what it means to map the brain's wiring diagram, why it's so hard, and what we might learn. Accessible and wide-ranging."
+  },
+  {
+    title: "How to Change Your Mind",
+    authors: "Michael Pollan",
+    year: 2018,
+    type: "book",
+    projects: ["General"],
+    tags: ["neuroscience", "consciousness", "accessible", "brain"],
+    url: "",
+    description: "While primarily about psychedelics, Pollan's book is also one of the most readable introductions to what neuroscience still doesn't understand about the brain — grounding context for why connectome-scale work matters."
+  },
+  {
+    title: "Loonshots: How to Nurture the Crazy Ideas That Win Wars, Cure Diseases, and Transform Industries",
+    authors: "Safi Bahcall",
+    year: 2019,
+    type: "book",
+    projects: ["General"],
+    tags: ["innovation", "culture", "leadership", "phase transitions", "management"],
+    url: "",
+    description: "A physicist turned biotech CEO examines why some teams and institutions reliably nurture breakthrough ideas while others kill them — highly relevant for designing the culture of a large consortium."
+  },
+  {
+    title: "The Alignment Problem",
+    authors: "Brian Christian",
+    year: 2020,
+    type: "book",
+    projects: ["General"],
+    tags: ["AI", "machine learning", "data", "values", "infrastructure"],
+    url: "",
+    description: "A compelling tour of how AI and machine learning systems are built and fail — valuable context for large neuroscience projects that rely heavily on automated analysis pipelines."
+  },
+];
+
+// ── FILTER / SORT STATE ───────────────────────────────────────────────
+let activeTypes    = new Set();
+let activeProjects = new Set();
+let sortByLikes    = false;
+let showFlagged    = false;
+
+const TYPES    = [...new Set(RESOURCES.map(r => r.type))].sort();
+const PROJECTS = [...new Set(RESOURCES.flatMap(r => r.projects))].sort();
+
+// ── STORAGE ───────────────────────────────────────────────────────────
+function loadVotes() {
+  try { return JSON.parse(localStorage.getItem('connectome-hub-votes') || '{}'); }
+  catch(e) { return {}; }
+}
+function saveVotes(v) {
+  localStorage.setItem('connectome-hub-votes', JSON.stringify(v));
+}
+function resourceKey(r) {
+  return r.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  initFirebase();
+  buildFilters();
+  render();
+  updatePendingCount();
+  // Initialize suggest modal tab panel display
+  switchSuggestTab('url');
+});
+
+function buildFilters() {
+  const tf = document.getElementById('type-filters');
+  TYPES.forEach(t => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.textContent = typeLabel(t);
+    btn.dataset.value = t;
+    btn.onclick = () => toggle(activeTypes, t, btn);
+    tf.appendChild(btn);
+  });
+
+  const pf = document.getElementById('project-filters');
+  PROJECTS.forEach(p => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-btn';
+    btn.textContent = p;
+    btn.dataset.value = p;
+    btn.onclick = () => toggle(activeProjects, p, btn);
+    pf.appendChild(btn);
+  });
+}
+
+function toggle(set, val, btn) {
+  if (set.has(val)) { set.delete(val); btn.classList.remove('active'); }
+  else              { set.add(val);    btn.classList.add('active'); }
+  render();
+}
+
+function toggleSort() {
+  sortByLikes = !sortByLikes;
+  const btn = document.getElementById('sort-btn');
+  btn.classList.toggle('active', sortByLikes);
+  btn.textContent = 'sort: most liked';
+  render();
+}
+
+function toggleShowFlagged() {
+  showFlagged = !showFlagged;
+  const btn = document.getElementById('flagged-btn');
+  btn.classList.toggle('active', showFlagged);
+  render();
+}
+
+function typeLabel(t) {
+  return { article: 'articles', book: 'books', podcast: 'podcasts',
+           video: 'videos', documentary: 'documentaries', talk: 'talks' }[t] || t;
+}
+function typeClass(t) { return 'type-' + t; }
+
+// ── LIKE / FLAG ACTIONS ───────────────────────────────────────────────
+function toggleLike(key) {
+  const votes = loadVotes();
+  if (!votes[key]) votes[key] = { likes: 0, flagged: false };
+  votes[key].likes = votes[key].likes > 0 ? 0 : 1;
+  saveVotes(votes);
+  render();
+}
+
+function toggleFlag(key) {
+  const votes = loadVotes();
+  if (!votes[key]) votes[key] = { likes: 0, flagged: false };
+  votes[key].flagged = !votes[key].flagged;
+  saveVotes(votes);
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────
+function render() {
+  const q      = document.getElementById('search').value.toLowerCase().trim();
+  const grid   = document.getElementById('grid');
+  const emptyEl = document.getElementById('empty');
+  const countEl = document.getElementById('count');
+  const votes  = loadVotes();
+
+  // Merge in any accepted community resources from storage
+  const communityRaw = JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]');
+  const allResources = [...RESOURCES, ...communityRaw];
+
+  let filtered = allResources.filter(r => {
+    const key = resourceKey(r);
+    const isFlagged = votes[key]?.flagged || false;
+    if (isFlagged && !showFlagged) return false;
+    if (activeTypes.size    && !activeTypes.has(r.type))                     return false;
+    if (activeProjects.size && !r.projects.some(p => activeProjects.has(p))) return false;
+    if (q) {
+      const haystack = [r.title, r.authors, r.description, ...r.tags, ...r.projects].join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
+    return true;
+  });
+
+  if (sortByLikes) {
+    filtered = [...filtered].sort((a, b) => {
+      const la = votes[resourceKey(a)]?.likes || 0;
+      const lb = votes[resourceKey(b)]?.likes || 0;
+      return lb - la;
+    });
+  }
+
+  const communityCount = communityRaw.length;
+  const totalLikes = Object.values(votes).reduce((s, v) => s + (v.likes || 0), 0);
+  const flaggedCount = Object.values(votes).filter(v => v.flagged).length;
+  countEl.textContent = `${filtered.length} resource${filtered.length !== 1 ? 's' : ''}` +
+    (totalLikes  ? ` · ${totalLikes} endorsed` : '') +
+    (flaggedCount && !showFlagged ? ` · ${flaggedCount} flagged (hidden)` : '');
+
+  grid.innerHTML = '';
+
+  if (filtered.length === 0) { emptyEl.style.display = 'block'; return; }
+  emptyEl.style.display = 'none';
+
+  filtered.forEach(r => {
+    const key     = resourceKey(r);
+    const v       = votes[key] || { likes: 0, flagged: false };
+    const liked   = v.likes > 0;
+    const flagged = v.flagged;
+
+    const card = document.createElement('div');
+    card.className = 'card' + (flagged ? ' is-flagged' : '');
+    card.onclick = () => openSidebar(key);
+
+    const displayDesc = getDescription(key, r.description || '');
+
+    const titleHTML = r.url
+      ? `<a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${r.title}</a>`
+      : r.title;
+
+    const tagsHTML = r.tags.map(tag =>
+      `<span class="tag" onclick="event.stopPropagation(); searchTag('${tag}')">${tag}</span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-type ${typeClass(r.type)}">${typeLabel(r.type)}</span>
+        <span class="card-year">${r.year}</span>
+        ${flagged ? '<span class="flagged-badge">flagged</span>' : ''}
+      </div>
+      <div class="card-title">${titleHTML}</div>
+      ${r.authors ? `<div class="card-authors">${r.authors}</div>` : ''}
+      <div class="card-desc">${esc(displayDesc)}</div>
+      <div class="card-tags">${tagsHTML}</div>
+      <div class="card-actions">
+        <button class="action-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleLike('${key}')">
+          ${liked ? 'endorsed' : 'endorse'}${v.likes > 0 ? ' (' + v.likes + ')' : ''}
+        </button>
+        <button class="action-btn ${flagged ? 'flagged-btn-active' : ''}" onclick="event.stopPropagation(); toggleFlag('${key}')">
+          ${flagged ? 'unflag' : 'flag'}
+        </button>
+        <button class="action-btn" onclick="event.stopPropagation(); openSidebar('${key}')" style="margin-left:auto; color: var(--blue); border-color: var(--blue)">
+          discuss
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function searchTag(tag) {
+  document.getElementById('search').value = tag;
+  render();
+}
+
+// ── ALIAS GENERATOR (docker-style: adjective_scientist) ───────────────
+const ALIAS_ADJ = ['agile','bold','bright','calm','clever','curious','deep','eager','focused',
+  'gentle','happy','keen','kind','lively','open','patient','quiet','sharp','swift',
+  'vibrant','warm','wise','zen','earnest','steady'];
+const ALIAS_SCI = ['cajal','curie','darwin','euler','faraday','feynman','franklin','gauss',
+  'golgi','hawking','heisenberg','hopper','hubble','lovelace','meitner','noether',
+  'pasteur','ramanujan','sagan','turing','bohr','herschel','lamarr','mcclintock'];
+
+function generateAlias() {
+  const a = ALIAS_ADJ[Math.floor(Math.random() * ALIAS_ADJ.length)];
+  const s = ALIAS_SCI[Math.floor(Math.random() * ALIAS_SCI.length)];
+  return `${a}_${s}`;
+}
+function getSessionAlias() {
+  let alias = sessionStorage.getItem('connectome-alias');
+  if (!alias) { alias = generateAlias(); sessionStorage.setItem('connectome-alias', alias); }
+  return alias;
+}
+
+// ── CLAUDE API KEY (optional — leave blank to use the built-in template generator) ───
+// If provided, enables richer AI summaries in the review panel.
+// Get a free key at console.anthropic.com → API Keys.
+const ANTHROPIC_API_KEY = "";
+
+// ── FIREBASE CONFIG ────────────────────────────────────────────────────
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ TO ENABLE SHARED COMMENTS:                                          │
+// │ 1. Go to console.firebase.google.com → create a project            │
+// │ 2. Add a web app → copy your config values below                   │
+// │ 3. In Firestore → create database (start in test mode)             │
+// │ 4. Share this updated HTML with your team — comments sync live      │
+// └─────────────────────────────────────────────────────────────────────┘
+const FIREBASE_CONFIG = {
+  apiKey:            "",   // ← paste your values here
+  authDomain:        "",
+  projectId:         "",
+  storageBucket:     "",
+  messagingSenderId: "",
+  appId:             ""
+};
+
+let db = null;
+let usingFirebase = false;
+let currentKey = null;
+let unsubListener = null;
+
+function initFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) return;
+  try {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    usingFirebase = true;
+  } catch(e) { console.warn('Firebase init failed, using localStorage:', e); }
+}
+
+// ── DESCRIPTION OVERRIDES ──────────────────────────────────────────────
+function loadDescOverrides() {
+  return JSON.parse(localStorage.getItem('connectome-hub-descs') || '{}');
+}
+function saveDescOverrides(obj) {
+  localStorage.setItem('connectome-hub-descs', JSON.stringify(obj));
+}
+function getDescription(key, fallback) {
+  const overrides = loadDescOverrides();
+  return overrides[key] !== undefined ? overrides[key] : fallback;
+}
+
+// ── SIDEBAR ────────────────────────────────────────────────────────────
+function openSidebar(key) {
+  currentKey = key;
+  const allResources = [...RESOURCES, ...JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]')];
+  const r = allResources.find(r => resourceKey(r) === key);
+  if (!r) return;
+
+  document.getElementById('sb-type').textContent = typeLabel(r.type);
+  document.getElementById('sb-title').textContent = r.title;
+  document.getElementById('sb-authors').textContent = r.authors || '';
+  document.getElementById('sb-text').value = '';
+  document.getElementById('sb-name').value = '';
+  document.getElementById('sb-storage-note').style.display = usingFirebase ? 'none' : 'block';
+
+  // Populate description (use override if one exists)
+  const desc = getDescription(key, r.description || '');
+  const descEl = document.getElementById('sb-desc-text');
+  descEl.textContent = desc || '(no summary)';
+  descEl.classList.toggle('is-edited', loadDescOverrides()[key] !== undefined);
+  cancelDescEdit(); // ensure edit area is closed
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sidebar').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadComments(key);
+}
+
+function toggleDescEdit() {
+  const area = document.getElementById('desc-edit-area');
+  const isOpen = area.classList.toggle('open');
+  if (isOpen) {
+    document.getElementById('desc-edit-input').value = document.getElementById('sb-desc-text').textContent.replace('(no summary)', '');
+    document.getElementById('desc-edit-input').focus();
+  }
+}
+function cancelDescEdit() {
+  document.getElementById('desc-edit-area').classList.remove('open');
+}
+function saveDescEdit() {
+  const newDesc = document.getElementById('desc-edit-input').value.trim();
+  if (!currentKey) return;
+
+  if (usingFirebase) {
+    db.collection('connectome-hub-descs').doc(currentKey).set({ description: newDesc })
+      .then(() => applyDescEdit(newDesc))
+      .catch(e => alert('Could not save: ' + e.message));
+  } else {
+    const overrides = loadDescOverrides();
+    overrides[currentKey] = newDesc;
+    saveDescOverrides(overrides);
+    applyDescEdit(newDesc);
+  }
+}
+function applyDescEdit(newDesc) {
+  const descEl = document.getElementById('sb-desc-text');
+  descEl.textContent = newDesc || '(no summary)';
+  descEl.classList.add('is-edited');
+  cancelDescEdit();
+  render(); // refresh card description on main grid
+}
+
+function closeSidebar() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sidebar').classList.remove('open');
+  document.body.style.overflow = '';
+  if (unsubListener) { unsubListener(); unsubListener = null; }
+  currentKey = null;
+}
+
+function loadComments(key) {
+  const el = document.getElementById('sb-comments');
+  el.innerHTML = '<div class="no-comments">loading&#x2026;</div>';
+
+  if (usingFirebase) {
+    if (unsubListener) unsubListener();
+    unsubListener = db.collection('connectome-hub-comments')
+      .where('resourceKey', '==', key)
+      .orderBy('timestamp', 'asc')
+      .onSnapshot(snap => {
+        renderComments(snap.docs.map(d => d.data()), el);
+      }, err => {
+        el.innerHTML = '<div class="no-comments">could not load comments.</div>';
+        console.error(err);
+      });
+  } else {
+    const all = JSON.parse(localStorage.getItem('connectome-hub-comments') || '{}');
+    renderComments(all[key] || [], el);
+  }
+}
+
+function renderComments(comments, el) {
+  if (!comments.length) {
+    el.innerHTML = '<div class="no-comments">no comments yet — be the first.</div>';
+    return;
+  }
+  el.innerHTML = comments.map(c => {
+    const ts = c.timestamp;
+    const date = ts
+      ? new Date(ts.seconds ? ts.seconds * 1000 : ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'just now';
+    return `<div class="comment">
+      <div class="comment-meta">
+        <span class="comment-name">${esc(c.name)}</span>
+        <span class="comment-time">${date}</span>
+      </div>
+      <div class="comment-text">${esc(c.text)}</div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function submitComment() {
+  const name = document.getElementById('sb-name').value.trim() || getSessionAlias();
+  const text = document.getElementById('sb-text').value.trim();
+  if (!text || !currentKey) return;
+
+  if (usingFirebase) {
+    db.collection('connectome-hub-comments').add({
+      resourceKey: currentKey, name, text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      document.getElementById('sb-text').value = '';
+    }).catch(e => alert('Could not post: ' + e.message));
+  } else {
+    const all = JSON.parse(localStorage.getItem('connectome-hub-comments') || '{}');
+    if (!all[currentKey]) all[currentKey] = [];
+    all[currentKey].push({ resourceKey: currentKey, name, text, timestamp: Date.now() });
+    localStorage.setItem('connectome-hub-comments', JSON.stringify(all));
+    document.getElementById('sb-text').value = '';
+    loadComments(currentKey);
+  }
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeSidebar(); closeSuggestModal(); closeAdminPanel(); }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') submitComment();
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'A') { e.preventDefault(); openAdminPanel(); }
+});
+
+// ── SUGGESTION STORAGE ─────────────────────────────────────────────────
+function loadSuggestions() {
+  if (usingFirebase) return null; // handled async
+  return JSON.parse(localStorage.getItem('connectome-hub-suggestions') || '[]');
+}
+function saveSuggestions(arr) {
+  localStorage.setItem('connectome-hub-suggestions', JSON.stringify(arr));
+}
+function loadAccepted() {
+  return JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]');
+}
+function saveAccepted(arr) {
+  localStorage.setItem('connectome-hub-accepted', JSON.stringify(arr));
+}
+
+async function updatePendingCount() {
+  let count = 0;
+  if (usingFirebase) {
+    try {
+      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
+      count = snap.size;
+    } catch(e) {}
+  } else {
+    count = loadSuggestions().filter(s => s.status === 'pending').length;
+  }
+  document.getElementById('pending-count').textContent = count;
+  document.getElementById('review-btn').classList.toggle('visible', count > 0);
+}
+
+// ── SUGGEST MODAL ──────────────────────────────────────────────────────
+let suggestTab = 'url';
+let fetchedData = null;
+
+function openSuggestModal() {
+  document.getElementById('suggest-overlay').classList.add('open');
+  document.getElementById('suggest-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  fetchedData = null;
+}
+function closeSuggestModal() {
+  document.getElementById('suggest-overlay').classList.remove('open');
+  document.getElementById('suggest-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  resetSuggestForm();
+}
+function resetSuggestForm() {
+  ['sug-url','sug-title','sug-authors','sug-year','sug-desc','sug-link','sug-submitter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const sel = document.getElementById('sug-type');
+  if (sel) sel.value = '';
+  document.getElementById('url-preview').classList.remove('visible');
+  document.getElementById('fetch-error').style.display = 'none';
+  fetchedData = null;
+}
+
+function switchSuggestTab(tab) {
+  suggestTab = tab;
+  document.getElementById('tab-url-panel').style.display    = tab === 'url'    ? 'flex' : 'none';
+  document.getElementById('tab-url-panel').style.flexDirection = 'column';
+  document.getElementById('tab-url-panel').style.gap        = '10px';
+  document.getElementById('tab-manual-panel').style.display = tab === 'manual' ? 'flex' : 'none';
+  document.getElementById('tab-manual-panel').style.flexDirection = 'column';
+  document.getElementById('tab-manual-panel').style.gap     = '10px';
+  document.getElementById('tab-url-btn').classList.toggle('active', tab === 'url');
+  document.getElementById('tab-manual-btn').classList.toggle('active', tab === 'manual');
+  fetchedData = null;
+}
+
+function cleanDescription(text) {
+  if (!text) return '';
+  // Strip e-commerce / ad / site-specific noise
+  const noisePatterns = [
+    /free (shipping|delivery|returns?)[\w\s,.]*/gi,
+    /ships?\s+(from|to|in|free)[\w\s,.]*/gi,
+    /\$[\d,.]+ ?(usd|cad|gbp)?/gi,
+    /add to (cart|bag|wishlist|list)[\w\s,.]*/gi,
+    /buy (now|today|it now|with)[\w\s,.]*/gi,
+    /\bprime\b[\w\s,.]*/gi,
+    /in stock[\w\s,.]*/gi,
+    /order (now|today|within)[\w\s,.]*/gi,
+    /\d+\s*(new|used)\s*(from|offer[s]?)[\w\s,.]*/gi,
+    /save \d+%[\w\s,.]*/gi,
+    /#\d+ (best\s?seller|in )[\w\s,.]*/gi,
+    /sold by [\w\s]+/gi,
+    /eligible for [\w\s]+/gi,
+    /returns? (accepted|policy|window)[\w\s,.]*/gi,
+    /\bsponsor(ed)?\b[\w\s,.]*/gi,
+    /limited( time)? (offer|deal)[\w\s,.]*/gi,
+    /only \d+ left[\w\s,.]*/gi,
+    /get it (by|as soon as)[\w\s,.]*/gi,
+    /\bclick here\b[\w\s,.]*/gi,
+    /\bsign up\b[\w\s,.]*/gi,
+    /\bsubscribe\b[\w\s,.]*/gi,
+  ];
+  let cleaned = text;
+  noisePatterns.forEach(p => { cleaned = cleaned.replace(p, ' '); });
+  // Collapse whitespace and trim
+  cleaned = cleaned.replace(/\s{2,}/g, ' ').trim();
+  // If what's left is very short (probably just noise), return empty
+  return cleaned.length < 30 ? '' : cleaned;
+}
+
+async function fetchUrlMeta() {
+  const url = document.getElementById('sug-url').value.trim();
+  if (!url) return;
+  const btn = document.getElementById('fetch-btn');
+  const errEl = document.getElementById('fetch-error');
+  btn.disabled = true;
+  btn.textContent = 'fetching…';
+  errEl.style.display = 'none';
+  document.getElementById('url-preview').classList.remove('visible');
+  fetchedData = null;
+
+  try {
+    const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+    const json = await res.json();
+    if (json.status !== 'success') throw new Error(json.message || 'Could not parse URL');
+    const d = json.data;
+    const rawDesc = d.description || '';
+    const cleanedDesc = cleanDescription(rawDesc);
+    fetchedData = {
+      title:   d.title || '',
+      authors: d.author || d.publisher || '',
+      url:     d.url   || url,
+      description: cleanedDesc,
+      year:    d.date ? new Date(d.date).getFullYear() : new Date().getFullYear(),
+      type:    'article'
+    };
+    document.getElementById('preview-title').textContent = fetchedData.title || '(no title found)';
+    document.getElementById('preview-meta').textContent  = [fetchedData.authors, fetchedData.year].filter(Boolean).join(' · ');
+    // Use textarea so submitter can edit before submitting
+    document.getElementById('preview-desc').value = cleanedDesc || '';
+    if (!cleanedDesc && rawDesc) {
+      document.getElementById('preview-desc').placeholder = 'Auto-summary was too noisy — please write a brief description.';
+    }
+    document.getElementById('url-preview').classList.add('visible');
+  } catch(e) {
+    errEl.textContent = 'Could not fetch metadata. Try manual entry instead.';
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'fetch info';
+  }
+}
+
+async function submitSuggestion() {
+  const submitter = document.getElementById('sug-submitter').value.trim() || getSessionAlias();
+  let data;
+
+  if (suggestTab === 'url') {
+    if (!fetchedData) { alert('Please fetch a URL first, or switch to manual entry.'); return; }
+    // Use the (possibly edited) description from the textarea
+    data = { ...fetchedData, description: document.getElementById('preview-desc').value.trim() };
+  } else {
+    const title = document.getElementById('sug-title').value.trim();
+    if (!title) { alert('A title is required.'); return; }
+    data = {
+      title,
+      authors: document.getElementById('sug-authors').value.trim(),
+      type:    document.getElementById('sug-type').value || 'article',
+      year:    parseInt(document.getElementById('sug-year').value) || new Date().getFullYear(),
+      description: document.getElementById('sug-desc').value.trim(),
+      url:     document.getElementById('sug-link').value.trim()
+    };
+  }
+
+  const suggestion = {
+    ...data,
+    projects: ['General'],
+    tags: [],
+    status: 'pending',
+    submittedBy: submitter,
+    submittedAt: Date.now()
+  };
+
+  if (usingFirebase) {
+    try {
+      await db.collection('connectome-hub-suggestions').add({
+        ...suggestion,
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { alert('Could not submit: ' + e.message); return; }
+  } else {
+    const arr = loadSuggestions();
+    suggestion.id = 'sug_' + Date.now();
+    arr.push(suggestion);
+    saveSuggestions(arr);
+  }
+
+  closeSuggestModal();
+  updatePendingCount();
+  alert(`Thanks, ${submitter}! Your suggestion has been submitted for review.`);
+}
+
+// Keyed store of suggestions currently shown in the admin panel
+const PENDING_MAP = {};
+
+// ── ADMIN / REVIEW PANEL ───────────────────────────────────────────────
+function openAdminPanel() {
+  document.getElementById('admin-panel').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  loadAdminList();
+}
+function closeAdminPanel() {
+  document.getElementById('admin-panel').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function loadAdminList() {
+  const el = document.getElementById('admin-list');
+  el.innerHTML = '<div class="no-pending">loading…</div>';
+  let suggestions = [];
+
+  if (usingFirebase) {
+    try {
+      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').orderBy('submittedAt','asc').get();
+      suggestions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    } catch(e) {
+      el.innerHTML = '<div class="no-pending">Could not load suggestions.</div>'; return;
+    }
+  } else {
+    suggestions = loadSuggestions().filter(s => s.status === 'pending');
+  }
+
+  if (!suggestions.length) {
+    el.innerHTML = '<div class="no-pending">No pending suggestions.</div>'; return;
+  }
+
+  // Store in map so generate/accept/reject can look up by ID without HTML encoding issues
+  suggestions.forEach(s => { PENDING_MAP[s.id] = s; });
+
+  el.innerHTML = suggestions.map(s => `
+    <div class="pending-card" id="pc-${esc(s.id)}">
+      <div class="pending-card-top">
+        <div>
+          <div class="pending-card-title">${esc(s.title)}</div>
+          <div class="pending-card-meta">${esc(s.authors || '')}${s.year ? ' · ' + s.year : ''}${s.type ? ' · ' + s.type : ''}</div>
+        </div>
+      </div>
+      ${s.url ? `<div class="pending-url"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></div>` : ''}
+      <div class="pending-card-info">submitted by ${esc(s.submittedBy || 'unknown')}${s.submittedAt ? ' · ' + new Date(s.submittedAt.seconds ? s.submittedAt.seconds*1000 : s.submittedAt).toLocaleDateString() : ''}</div>
+      ${s.description ? `<div class="pending-card-desc">${esc(s.description)}</div>` : ''}
+      <div class="pending-actions">
+        <button class="reject-btn" onclick="rejectSuggestion('${esc(s.id)}')">reject</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function acceptSuggestion(id) {
+  // Read the (possibly edited) description from the textarea in the review panel
+  const descEl = document.getElementById(`desc-${id}`);
+  const editedDescription = descEl ? descEl.value.trim() : null;
+
+  let suggestion;
+  if (usingFirebase) {
+    try {
+      const ref = db.collection('connectome-hub-suggestions').doc(id);
+      const doc = await ref.get();
+      suggestion = { ...doc.data() };
+      if (editedDescription !== null) suggestion.description = editedDescription;
+      await ref.update({ status: 'accepted' });
+      // Store in accepted collection
+      await db.collection('connectome-hub-accepted').add({ ...suggestion, status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } catch(e) { alert('Error: ' + e.message); return; }
+  } else {
+    const arr = loadSuggestions();
+    const idx = arr.findIndex(s => s.id === id);
+    if (idx === -1) return;
+    suggestion = { ...arr[idx] };
+    if (editedDescription !== null) suggestion.description = editedDescription;
+    arr[idx].status = 'accepted';
+    saveSuggestions(arr);
+    const accepted = loadAccepted();
+    accepted.push({ ...suggestion, status: 'accepted' });
+    saveAccepted(accepted);
+  }
+
+  document.getElementById(`pc-${id}`)?.remove();
+  if (!document.querySelector('.pending-card')) {
+    document.getElementById('admin-list').innerHTML = '<div class="no-pending">No pending suggestions.</div>';
+  }
+  updatePendingCount();
+  render(); // refresh main grid
+}
+
+// ── EXPORT PENDING SUGGESTIONS ────────────────────────────────────────
+async function exportSuggestions() {
+  let suggestions = [];
+  if (usingFirebase) {
+    try {
+      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
+      suggestions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+    } catch(e) { alert('Could not load suggestions: ' + e.message); return; }
+  } else {
+    suggestions = loadSuggestions().filter(s => s.status === 'pending');
+  }
+
+  if (!suggestions.length) {
+    alert('No pending suggestions to export.'); return;
+  }
+
+  // Strip internal fields, keep only what the curator needs
+  const exportData = suggestions.map(({ id, title, authors, type, year, url, description, submittedBy, submittedAt }) => ({
+    id, title, authors, type, year, url,
+    rawDescription: description || '',
+    submittedBy: submittedBy || 'unknown',
+    submittedAt: submittedAt ? new Date(submittedAt.seconds ? submittedAt.seconds * 1000 : submittedAt).toISOString() : ''
+  }));
+
+  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = `connectome-suggestions-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function rejectSuggestion(id) {
+  if (usingFirebase) {
+    try { await db.collection('connectome-hub-suggestions').doc(id).update({ status: 'rejected' }); }
+    catch(e) { alert('Error: ' + e.message); return; }
+  } else {
+    const arr = loadSuggestions();
+    const idx = arr.findIndex(s => s.id === id);
+    if (idx !== -1) { arr[idx].status = 'rejected'; saveSuggestions(arr); }
+  }
+  document.getElementById(`pc-${id}`)?.remove();
+  if (!document.querySelector('.pending-card')) {
+    document.getElementById('admin-list').innerHTML = '<div class="no-pending">No pending suggestions.</div>';
+  }
+  updatePendingCount();
+}
+</script>
+</body>
+</html>
