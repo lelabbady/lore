@@ -907,6 +907,37 @@
     line-height: 1.55;
   }
   .pending-desc-edit:focus { border-color: var(--blue); background: var(--surface); }
+
+  /* ── REVIEW PANEL: SECTIONS & REMOVAL REQUESTS ────────────────────── */
+  .admin-section-title {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--light);
+    margin: 26px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .admin-section-title:first-of-type { margin-top: 0; }
+  .removal-card { border-left-color: var(--ochre); }
+  .removal-reason {
+    font-size: 0.82rem; color: #444; line-height: 1.5;
+    background: rgba(203,142,46,0.10); border-left: 2px solid var(--ochre);
+    padding: 6px 10px;
+  }
+  .removal-reason .removal-reason-label {
+    font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--ochre); display: block; margin-bottom: 2px;
+  }
+  .removal-core-note { font-size: 0.7rem; color: var(--light); font-style: italic; }
+  .confirm-remove-btn {
+    padding: 5px 16px; background: var(--maroon); color: #fff; border: none;
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    text-transform: lowercase; cursor: pointer; letter-spacing: 0.03em; border-radius: 0;
+  }
+  .confirm-remove-btn:hover { background: #7a1020; }
+  .keep-btn {
+    padding: 5px 16px; background: transparent; color: var(--muted); border: 1px solid var(--muted);
+    font-family: inherit; font-size: 0.75rem; font-weight: 700;
+    text-transform: lowercase; cursor: pointer; letter-spacing: 0.03em; border-radius: 0;
+  }
+  .keep-btn:hover { background: var(--muted); color: #fff; }
 </style>
 </head>
 <body>
@@ -994,9 +1025,9 @@
   <div class="admin-inner">
     <div class="admin-topbar">
       <div>
-        <div class="admin-title">pending suggestions</div>
+        <div class="admin-title">pending review</div>
         <div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">
-          Export this list, share with your curator, and they will add approved resources directly to the file.
+          Suggested additions and flagged removals. Export this list and share with your curator to apply approved changes to the library.
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;">
@@ -1426,9 +1457,29 @@ function toggleLike(key) {
 function toggleFlag(key) {
   const votes = loadVotes();
   if (!votes[key]) votes[key] = { likes: 0, flagged: false };
-  votes[key].flagged = !votes[key].flagged;
-  saveVotes(votes);
+  const turningOn = !votes[key].flagged;
+
+  if (turningOn) {
+    const r = findResource(key);
+    const reason = (prompt(
+      'Flag this resource to request its removal.\n\n' +
+      'It will be hidden here and queued for the curator to review.\n\n' +
+      'Why should it be removed? (optional — e.g. outdated, off-topic, duplicate, broken link)'
+    ) || '').trim();
+    votes[key].flagged = true;
+    saveVotes(votes);
+    addRemovalRequest(key, r ? r.title : key, reason);
+  } else {
+    votes[key].flagged = false;
+    saveVotes(votes);
+    withdrawRemovalRequest(key);
+  }
   render();
+}
+
+function findResource(key) {
+  const all = [...RESOURCES, ...loadAccepted()];
+  return all.find(r => resourceKey(r) === key);
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
@@ -1753,15 +1804,71 @@ function saveAccepted(arr) {
   localStorage.setItem('connectome-hub-accepted', JSON.stringify(arr));
 }
 
+// ── REMOVAL REQUESTS (flag → review queue) ─────────────────────────────
+function loadRemovals() {
+  return JSON.parse(localStorage.getItem('connectome-hub-removals') || '[]');
+}
+function saveRemovals(arr) {
+  localStorage.setItem('connectome-hub-removals', JSON.stringify(arr));
+}
+
+// Returns true if the resource is community-submitted (lives in storage, not the source file)
+function isAcceptedResource(key) {
+  return loadAccepted().some(r => resourceKey(r) === key);
+}
+
+async function addRemovalRequest(key, title, reason) {
+  const submitter = getSessionAlias();
+  const request = {
+    key, title,
+    reason: reason || '',
+    core: !isAcceptedResource(key), // core = hardcoded in the source file
+    status: 'pending',
+    submittedBy: submitter,
+    submittedAt: Date.now()
+  };
+  if (usingFirebase) {
+    try {
+      await db.collection('connectome-hub-removals').add({
+        ...request,
+        submittedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.warn('Could not file removal request:', e); }
+  } else {
+    const arr = loadRemovals();
+    if (arr.some(x => x.key === key && x.status === 'pending')) return; // de-dupe
+    request.id = 'rem_' + Date.now();
+    arr.push(request);
+    saveRemovals(arr);
+  }
+  updatePendingCount();
+}
+
+async function withdrawRemovalRequest(key) {
+  if (usingFirebase) {
+    try {
+      const snap = await db.collection('connectome-hub-removals')
+        .where('key','==',key).where('status','==','pending').get();
+      await Promise.all(snap.docs.map(d => d.ref.update({ status: 'withdrawn' })));
+    } catch(e) { console.warn('Could not withdraw removal request:', e); }
+  } else {
+    const arr = loadRemovals().filter(x => !(x.key === key && x.status === 'pending'));
+    saveRemovals(arr);
+  }
+  updatePendingCount();
+}
+
 async function updatePendingCount() {
   let count = 0;
   if (usingFirebase) {
     try {
-      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
-      count = snap.size;
+      const sug = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
+      const rem = await db.collection('connectome-hub-removals').where('status','==','pending').get();
+      count = sug.size + rem.size;
     } catch(e) {}
   } else {
-    count = loadSuggestions().filter(s => s.status === 'pending').length;
+    count = loadSuggestions().filter(s => s.status === 'pending').length
+          + loadRemovals().filter(r => r.status === 'pending').length;
   }
   document.getElementById('pending-count').textContent = count;
   document.getElementById('review-btn').classList.toggle('visible', count > 0);
@@ -1934,8 +2041,9 @@ async function submitSuggestion() {
   alert(`Thanks, ${submitter}! Your suggestion has been submitted for review.`);
 }
 
-// Keyed store of suggestions currently shown in the admin panel
+// Keyed store of items currently shown in the admin panel
 const PENDING_MAP = {};
+const REMOVAL_MAP = {};
 
 // ── ADMIN / REVIEW PANEL ───────────────────────────────────────────────
 function openAdminPanel() {
@@ -1951,27 +2059,34 @@ function closeAdminPanel() {
 async function loadAdminList() {
   const el = document.getElementById('admin-list');
   el.innerHTML = '<div class="no-pending">loading…</div>';
-  let suggestions = [];
+  let suggestions = [], removals = [];
 
   if (usingFirebase) {
     try {
-      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').orderBy('submittedAt','asc').get();
-      suggestions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      const sSnap = await db.collection('connectome-hub-suggestions').where('status','==','pending').orderBy('submittedAt','asc').get();
+      suggestions = sSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+      const rSnap = await db.collection('connectome-hub-removals').where('status','==','pending').orderBy('submittedAt','asc').get();
+      removals = rSnap.docs.map(d => ({ ...d.data(), id: d.id }));
     } catch(e) {
-      el.innerHTML = '<div class="no-pending">Could not load suggestions.</div>'; return;
+      el.innerHTML = '<div class="no-pending">Could not load review queue.</div>'; return;
     }
   } else {
     suggestions = loadSuggestions().filter(s => s.status === 'pending');
+    removals    = loadRemovals().filter(r => r.status === 'pending');
   }
 
-  if (!suggestions.length) {
-    el.innerHTML = '<div class="no-pending">No pending suggestions.</div>'; return;
+  if (!suggestions.length && !removals.length) {
+    el.innerHTML = '<div class="no-pending">Nothing to review.</div>'; return;
   }
 
-  // Store in map so generate/accept/reject can look up by ID without HTML encoding issues
+  // Store in maps so accept/reject/confirm can look up by ID without HTML encoding issues
   suggestions.forEach(s => { PENDING_MAP[s.id] = s; });
+  removals.forEach(r => { REMOVAL_MAP[r.id] = r; });
 
-  el.innerHTML = suggestions.map(s => `
+  let html = '';
+
+  html += `<div class="admin-section-title">suggested additions (${suggestions.length})</div>`;
+  html += suggestions.length ? suggestions.map(s => `
     <div class="pending-card" id="pc-${esc(s.id)}">
       <div class="pending-card-top">
         <div>
@@ -1986,7 +2101,30 @@ async function loadAdminList() {
         <button class="reject-btn" onclick="rejectSuggestion('${esc(s.id)}')">reject</button>
       </div>
     </div>
-  `).join('');
+  `).join('') : '<div class="pending-card-info" style="margin-bottom:14px">None.</div>';
+
+  html += `<div class="admin-section-title">flagged for removal (${removals.length})</div>`;
+  html += removals.length ? removals.map(r => `
+    <div class="pending-card removal-card" id="rc-${esc(r.id)}">
+      <div class="pending-card-top">
+        <div>
+          <div class="pending-card-title">${esc(r.title)}</div>
+          <div class="pending-card-meta">${r.core ? 'core library item' : 'community submission'}</div>
+        </div>
+      </div>
+      ${r.reason ? `<div class="removal-reason"><span class="removal-reason-label">reason</span>${esc(r.reason)}</div>` : ''}
+      <div class="pending-card-info">flagged by ${esc(r.submittedBy || 'unknown')}${r.submittedAt ? ' · ' + new Date(r.submittedAt.seconds ? r.submittedAt.seconds*1000 : r.submittedAt).toLocaleDateString() : ''}</div>
+      <div class="removal-core-note">${r.core
+        ? 'Core library item — stays in the export manifest so the curator removes it from the source file.'
+        : 'Community submission — confirming deletes it from this browser immediately.'}</div>
+      <div class="pending-actions">
+        ${r.core ? '' : `<button class="confirm-remove-btn" onclick="confirmRemoval('${esc(r.id)}')">remove now</button>`}
+        <button class="keep-btn" onclick="dismissRemoval('${esc(r.id)}')">keep (dismiss flag)</button>
+      </div>
+    </div>
+  `).join('') : '<div class="pending-card-info">None.</div>';
+
+  el.innerHTML = html;
 }
 
 async function acceptSuggestion(id) {
@@ -2028,32 +2166,49 @@ async function acceptSuggestion(id) {
 
 // ── EXPORT PENDING SUGGESTIONS ────────────────────────────────────────
 async function exportSuggestions() {
-  let suggestions = [];
+  let suggestions = [], removals = [];
   if (usingFirebase) {
     try {
-      const snap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
-      suggestions = snap.docs.map(d => ({ ...d.data(), id: d.id }));
-    } catch(e) { alert('Could not load suggestions: ' + e.message); return; }
+      const sSnap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
+      suggestions = sSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+      const rSnap = await db.collection('connectome-hub-removals').where('status','==','pending').get();
+      removals = rSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+    } catch(e) { alert('Could not load review queue: ' + e.message); return; }
   } else {
     suggestions = loadSuggestions().filter(s => s.status === 'pending');
+    removals    = loadRemovals().filter(r => r.status === 'pending');
   }
 
-  if (!suggestions.length) {
-    alert('No pending suggestions to export.'); return;
+  if (!suggestions.length && !removals.length) {
+    alert('Nothing pending to export.'); return;
   }
 
-  // Strip internal fields, keep only what the curator needs
-  const exportData = suggestions.map(({ id, title, authors, type, year, url, description, submittedBy, submittedAt }) => ({
-    id, title, authors, type, year, url,
-    rawDescription: description || '',
-    submittedBy: submittedBy || 'unknown',
-    submittedAt: submittedAt ? new Date(submittedAt.seconds ? submittedAt.seconds * 1000 : submittedAt).toISOString() : ''
-  }));
+  const isoDate = v => v ? new Date(v.seconds ? v.seconds * 1000 : v).toISOString() : '';
 
-  const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+  const manifest = {
+    library: 'LORE — Library Of Research Experiences',
+    exportedAt: new Date().toISOString(),
+    // Resources to ADD — curator writes tags/projects/description and adds to RESOURCES
+    toAdd: suggestions.map(({ id, title, authors, type, year, url, description, submittedBy, submittedAt }) => ({
+      id, title, authors, type, year, url,
+      rawDescription: description || '',
+      submittedBy: submittedBy || 'unknown',
+      submittedAt: isoDate(submittedAt)
+    })),
+    // Resources to REMOVE — curator deletes matching entries from RESOURCES
+    toRemove: removals.map(({ id, key, title, reason, core, submittedBy, submittedAt }) => ({
+      id, key, title,
+      reason: reason || '',
+      location: core ? 'core (source file)' : 'community submission',
+      flaggedBy: submittedBy || 'unknown',
+      flaggedAt: isoDate(submittedAt)
+    }))
+  };
+
+  const blob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
   const a    = document.createElement('a');
   a.href     = URL.createObjectURL(blob);
-  a.download = `connectome-suggestions-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = `lore-review-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -2067,11 +2222,55 @@ async function rejectSuggestion(id) {
     const idx = arr.findIndex(s => s.id === id);
     if (idx !== -1) { arr[idx].status = 'rejected'; saveSuggestions(arr); }
   }
-  document.getElementById(`pc-${id}`)?.remove();
-  if (!document.querySelector('.pending-card')) {
-    document.getElementById('admin-list').innerHTML = '<div class="no-pending">No pending suggestions.</div>';
-  }
   updatePendingCount();
+  loadAdminList();
+}
+
+// ── REMOVAL REVIEW ACTIONS ─────────────────────────────────────────────
+function clearFlag(key) {
+  const votes = loadVotes();
+  if (votes[key]) { votes[key].flagged = false; saveVotes(votes); }
+}
+
+// "keep" — the flag was unwarranted; withdraw the request and unhide the resource
+async function dismissRemoval(id) {
+  const req = REMOVAL_MAP[id];
+  if (usingFirebase) {
+    try { await db.collection('connectome-hub-removals').doc(id).update({ status: 'dismissed' }); }
+    catch(e) { alert('Error: ' + e.message); return; }
+  } else {
+    const arr = loadRemovals();
+    const idx = arr.findIndex(r => r.id === id);
+    if (idx !== -1) { arr[idx].status = 'dismissed'; saveRemovals(arr); }
+  }
+  if (req) clearFlag(req.key);
+  updatePendingCount();
+  loadAdminList();
+  render();
+}
+
+// "remove now" — community submissions only; delete from the accepted store in this browser
+async function confirmRemoval(id) {
+  const req = REMOVAL_MAP[id];
+  if (!req) return;
+  if (usingFirebase) {
+    try {
+      await db.collection('connectome-hub-removals').doc(id).update({ status: 'removed' });
+      const snap = await db.collection('connectome-hub-accepted').get();
+      await Promise.all(snap.docs
+        .filter(d => resourceKey(d.data()) === req.key)
+        .map(d => d.ref.delete()));
+    } catch(e) { alert('Error: ' + e.message); return; }
+  } else {
+    const arr = loadRemovals();
+    const idx = arr.findIndex(r => r.id === id);
+    if (idx !== -1) { arr[idx].status = 'removed'; saveRemovals(arr); }
+    saveAccepted(loadAccepted().filter(r => resourceKey(r) !== req.key));
+  }
+  clearFlag(req.key);
+  updatePendingCount();
+  loadAdminList();
+  render();
 }
 </script>
 </body>
