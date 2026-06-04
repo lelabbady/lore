@@ -1382,6 +1382,42 @@ function loadVotes() {
 function saveVotes(v) {
   localStorage.setItem('connectome-hub-votes', JSON.stringify(v));
 }
+
+// ── SHARED-STATE CACHES (hydrated by Firestore listeners when Firebase is on) ──
+let fbVotes = {};                  // resourceKey -> { endorsedBy: [clientId] }
+let fbAccepted = [];               // accepted community resources
+let fbDescs = {};                  // resourceKey -> edited summary
+let fbPendingRemovals = new Set(); // resourceKeys with a pending removal request
+let fbPendingSuggestions = 0;
+
+// Stable per-browser identity so each browser counts once toward endorsements/flags
+function getClientId() {
+  let id = localStorage.getItem('lore-client-id');
+  if (!id) {
+    id = 'c_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    localStorage.setItem('lore-client-id', id);
+  }
+  return id;
+}
+
+// Unified accessors — read shared Firestore caches when on, else local storage
+function endorseCount(key) {
+  if (usingFirebase) return (fbVotes[key]?.endorsedBy || []).length;
+  return loadVotes()[key]?.likes || 0;
+}
+function isEndorsedByMe(key) {
+  if (usingFirebase) return (fbVotes[key]?.endorsedBy || []).includes(getClientId());
+  return (loadVotes()[key]?.likes || 0) > 0;
+}
+function isFlagged(key) {
+  if (usingFirebase) return fbPendingRemovals.has(key);
+  return loadVotes()[key]?.flagged || false;
+}
+function hasDescOverride(key) {
+  if (usingFirebase) return fbDescs[key] !== undefined;
+  return loadDescOverrides()[key] !== undefined;
+}
+
 function resourceKey(r) {
   return r.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -1447,31 +1483,46 @@ function typeClass(t) { return 'type-' + t; }
 
 // ── LIKE / FLAG ACTIONS ───────────────────────────────────────────────
 function toggleLike(key) {
-  const votes = loadVotes();
-  if (!votes[key]) votes[key] = { likes: 0, flagged: false };
-  votes[key].likes = votes[key].likes > 0 ? 0 : 1;
-  saveVotes(votes);
-  render();
+  if (usingFirebase) {
+    const id = getClientId();
+    const op = isEndorsedByMe(key)
+      ? firebase.firestore.FieldValue.arrayRemove(id)
+      : firebase.firestore.FieldValue.arrayUnion(id);
+    db.collection('connectome-hub-votes').doc(key).set({ endorsedBy: op }, { merge: true })
+      .catch(e => alert('Could not save endorsement: ' + e.message));
+    // the votes listener re-renders for everyone
+  } else {
+    const votes = loadVotes();
+    if (!votes[key]) votes[key] = { likes: 0, flagged: false };
+    votes[key].likes = votes[key].likes > 0 ? 0 : 1;
+    saveVotes(votes);
+    render();
+  }
 }
 
 function toggleFlag(key) {
-  const votes = loadVotes();
-  if (!votes[key]) votes[key] = { likes: 0, flagged: false };
-  const turningOn = !votes[key].flagged;
+  const turningOn = !isFlagged(key);
 
   if (turningOn) {
     const r = findResource(key);
     const reason = (prompt(
       'Flag this resource to request its removal.\n\n' +
-      'It will be hidden here and queued for the curator to review.\n\n' +
+      'It will be hidden and queued for the curator to review.\n\n' +
       'Why should it be removed? (optional — e.g. outdated, off-topic, duplicate, broken link)'
     ) || '').trim();
-    votes[key].flagged = true;
-    saveVotes(votes);
+    if (!usingFirebase) {
+      const votes = loadVotes();
+      if (!votes[key]) votes[key] = { likes: 0, flagged: false };
+      votes[key].flagged = true;
+      saveVotes(votes);
+    }
     addRemovalRequest(key, r ? r.title : key, reason);
   } else {
-    votes[key].flagged = false;
-    saveVotes(votes);
+    if (!usingFirebase) {
+      const votes = loadVotes();
+      if (votes[key]) votes[key].flagged = false;
+      saveVotes(votes);
+    }
     withdrawRemovalRequest(key);
   }
   render();
@@ -1488,16 +1539,14 @@ function render() {
   const grid   = document.getElementById('grid');
   const emptyEl = document.getElementById('empty');
   const countEl = document.getElementById('count');
-  const votes  = loadVotes();
 
-  // Merge in any accepted community resources from storage
-  const communityRaw = JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]');
+  // Merge in any accepted community resources (shared store when Firebase is on)
+  const communityRaw = loadAccepted();
   const allResources = [...RESOURCES, ...communityRaw];
 
   let filtered = allResources.filter(r => {
     const key = resourceKey(r);
-    const isFlagged = votes[key]?.flagged || false;
-    if (isFlagged && !showFlagged) return false;
+    if (isFlagged(key) && !showFlagged) return false;
     if (activeTypes.size    && !activeTypes.has(r.type))                     return false;
     if (activeProjects.size && !r.projects.some(p => activeProjects.has(p))) return false;
     if (q) {
@@ -1509,15 +1558,14 @@ function render() {
 
   if (sortByLikes) {
     filtered = [...filtered].sort((a, b) => {
-      const la = votes[resourceKey(a)]?.likes || 0;
-      const lb = votes[resourceKey(b)]?.likes || 0;
+      const la = endorseCount(resourceKey(a));
+      const lb = endorseCount(resourceKey(b));
       return lb - la;
     });
   }
 
-  const communityCount = communityRaw.length;
-  const totalLikes = Object.values(votes).reduce((s, v) => s + (v.likes || 0), 0);
-  const flaggedCount = Object.values(votes).filter(v => v.flagged).length;
+  const totalLikes = allResources.reduce((s, r) => s + endorseCount(resourceKey(r)), 0);
+  const flaggedCount = allResources.filter(r => isFlagged(resourceKey(r))).length;
   countEl.textContent = `${filtered.length} resource${filtered.length !== 1 ? 's' : ''}` +
     (totalLikes  ? ` · ${totalLikes} endorsed` : '') +
     (flaggedCount && !showFlagged ? ` · ${flaggedCount} flagged (hidden)` : '');
@@ -1529,9 +1577,9 @@ function render() {
 
   filtered.forEach(r => {
     const key     = resourceKey(r);
-    const v       = votes[key] || { likes: 0, flagged: false };
-    const liked   = v.likes > 0;
-    const flagged = v.flagged;
+    const liked   = isEndorsedByMe(key);
+    const flagged = isFlagged(key);
+    const endorsements = endorseCount(key);
 
     const card = document.createElement('div');
     card.className = 'card' + (flagged ? ' is-flagged' : '');
@@ -1559,7 +1607,7 @@ function render() {
       <div class="card-tags">${tagsHTML}</div>
       <div class="card-actions">
         <button class="action-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleLike('${key}')">
-          ${liked ? 'endorsed' : 'endorse'}${v.likes > 0 ? ' (' + v.likes + ')' : ''}
+          ${liked ? 'endorsed' : 'endorse'}${endorsements > 0 ? ' (' + endorsements + ')' : ''}
         </button>
         <button class="action-btn ${flagged ? 'flagged-btn-active' : ''}" onclick="event.stopPropagation(); toggleFlag('${key}')">
           ${flagged ? 'unflag' : 'flag'}
@@ -1603,20 +1651,17 @@ function getSessionAlias() {
 const ANTHROPIC_API_KEY = "";
 
 // ── FIREBASE CONFIG ────────────────────────────────────────────────────
-// ┌─────────────────────────────────────────────────────────────────────┐
-// │ TO ENABLE SHARED COMMENTS:                                          │
-// │ 1. Go to console.firebase.google.com → create a project            │
-// │ 2. Add a web app → copy your config values below                   │
-// │ 3. In Firestore → create database (start in test mode)             │
-// │ 4. Share this updated HTML with your team — comments sync live      │
-// └─────────────────────────────────────────────────────────────────────┘
+// Shared backend is ENABLED. All comments, endorsements, suggestions, flags,
+// accepted resources, and edited summaries sync live across everyone's browser.
+// These values are not secret — Firebase web config is meant to ship in client
+// code; access is governed by the Firestore security rules in the console.
 const FIREBASE_CONFIG = {
-  apiKey:            "",   // ← paste your values here
-  authDomain:        "",
-  projectId:         "",
-  storageBucket:     "",
-  messagingSenderId: "",
-  appId:             ""
+  apiKey:            "AIzaSyAtux_93Qz_rJcxSujAvRrBsNB02J1eY00",
+  authDomain:        "lore-library-89cec.firebaseapp.com",
+  projectId:         "lore-library-89cec",
+  storageBucket:     "lore-library-89cec.firebasestorage.app",
+  messagingSenderId: "1022037394904",
+  appId:             "1:1022037394904:web:aa892c1ae6243e02d2dead"
 };
 
 let db = null;
@@ -1630,7 +1675,32 @@ function initFirebase() {
     firebase.initializeApp(FIREBASE_CONFIG);
     db = firebase.firestore();
     usingFirebase = true;
+    subscribeShared();
   } catch(e) { console.warn('Firebase init failed, using localStorage:', e); }
+}
+
+// Live listeners keep every browser showing the same data in real time
+function subscribeShared() {
+  db.collection('connectome-hub-votes').onSnapshot(s => {
+    fbVotes = {}; s.forEach(d => { fbVotes[d.id] = d.data(); }); render();
+  }, e => console.warn('votes listener:', e));
+
+  db.collection('connectome-hub-accepted').onSnapshot(s => {
+    fbAccepted = s.docs.map(d => ({ ...d.data() })); render();
+  }, e => console.warn('accepted listener:', e));
+
+  db.collection('connectome-hub-descs').onSnapshot(s => {
+    fbDescs = {}; s.forEach(d => { fbDescs[d.id] = d.data().description; }); render();
+  }, e => console.warn('descs listener:', e));
+
+  db.collection('connectome-hub-suggestions').where('status','==','pending').onSnapshot(s => {
+    fbPendingSuggestions = s.size; updatePendingCount();
+  }, e => console.warn('suggestions listener:', e));
+
+  db.collection('connectome-hub-removals').where('status','==','pending').onSnapshot(s => {
+    fbPendingRemovals = new Set(s.docs.map(d => d.data().key));
+    updatePendingCount(); render();
+  }, e => console.warn('removals listener:', e));
 }
 
 // ── DESCRIPTION OVERRIDES ──────────────────────────────────────────────
@@ -1641,6 +1711,7 @@ function saveDescOverrides(obj) {
   localStorage.setItem('connectome-hub-descs', JSON.stringify(obj));
 }
 function getDescription(key, fallback) {
+  if (usingFirebase) return fbDescs[key] !== undefined ? fbDescs[key] : fallback;
   const overrides = loadDescOverrides();
   return overrides[key] !== undefined ? overrides[key] : fallback;
 }
@@ -1648,7 +1719,7 @@ function getDescription(key, fallback) {
 // ── SIDEBAR ────────────────────────────────────────────────────────────
 function openSidebar(key) {
   currentKey = key;
-  const allResources = [...RESOURCES, ...JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]')];
+  const allResources = [...RESOURCES, ...loadAccepted()];
   const r = allResources.find(r => resourceKey(r) === key);
   if (!r) return;
 
@@ -1663,7 +1734,7 @@ function openSidebar(key) {
   const desc = getDescription(key, r.description || '');
   const descEl = document.getElementById('sb-desc-text');
   descEl.textContent = desc || '(no summary)';
-  descEl.classList.toggle('is-edited', loadDescOverrides()[key] !== undefined);
+  descEl.classList.toggle('is-edited', hasDescOverride(key));
   cancelDescEdit(); // ensure edit area is closed
 
   document.getElementById('overlay').classList.add('open');
@@ -1722,9 +1793,10 @@ function loadComments(key) {
     if (unsubListener) unsubListener();
     unsubListener = db.collection('connectome-hub-comments')
       .where('resourceKey', '==', key)
-      .orderBy('timestamp', 'asc')
       .onSnapshot(snap => {
-        renderComments(snap.docs.map(d => d.data()), el);
+        const ts = v => v ? (v.seconds ? v.seconds * 1000 : v) : 0;
+        const docs = snap.docs.map(d => d.data()).sort((a, b) => ts(a.timestamp) - ts(b.timestamp));
+        renderComments(docs, el);
       }, err => {
         el.innerHTML = '<div class="no-comments">could not load comments.</div>';
         console.error(err);
@@ -1798,6 +1870,7 @@ function saveSuggestions(arr) {
   localStorage.setItem('connectome-hub-suggestions', JSON.stringify(arr));
 }
 function loadAccepted() {
+  if (usingFirebase) return fbAccepted;
   return JSON.parse(localStorage.getItem('connectome-hub-accepted') || '[]');
 }
 function saveAccepted(arr) {
@@ -1847,9 +1920,10 @@ async function addRemovalRequest(key, title, reason) {
 async function withdrawRemovalRequest(key) {
   if (usingFirebase) {
     try {
-      const snap = await db.collection('connectome-hub-removals')
-        .where('key','==',key).where('status','==','pending').get();
-      await Promise.all(snap.docs.map(d => d.ref.update({ status: 'withdrawn' })));
+      const snap = await db.collection('connectome-hub-removals').where('key','==',key).get();
+      await Promise.all(snap.docs
+        .filter(d => d.data().status === 'pending')
+        .map(d => d.ref.update({ status: 'withdrawn' })));
     } catch(e) { console.warn('Could not withdraw removal request:', e); }
   } else {
     const arr = loadRemovals().filter(x => !(x.key === key && x.status === 'pending'));
@@ -1861,11 +1935,7 @@ async function withdrawRemovalRequest(key) {
 async function updatePendingCount() {
   let count = 0;
   if (usingFirebase) {
-    try {
-      const sug = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
-      const rem = await db.collection('connectome-hub-removals').where('status','==','pending').get();
-      count = sug.size + rem.size;
-    } catch(e) {}
+    count = fbPendingSuggestions + fbPendingRemovals.size;
   } else {
     count = loadSuggestions().filter(s => s.status === 'pending').length
           + loadRemovals().filter(r => r.status === 'pending').length;
@@ -2063,10 +2133,13 @@ async function loadAdminList() {
 
   if (usingFirebase) {
     try {
-      const sSnap = await db.collection('connectome-hub-suggestions').where('status','==','pending').orderBy('submittedAt','asc').get();
+      const sSnap = await db.collection('connectome-hub-suggestions').where('status','==','pending').get();
       suggestions = sSnap.docs.map(d => ({ ...d.data(), id: d.id }));
-      const rSnap = await db.collection('connectome-hub-removals').where('status','==','pending').orderBy('submittedAt','asc').get();
+      const rSnap = await db.collection('connectome-hub-removals').where('status','==','pending').get();
       removals = rSnap.docs.map(d => ({ ...d.data(), id: d.id }));
+      const ts = v => v ? (v.seconds ? v.seconds * 1000 : v) : 0;
+      suggestions.sort((a, b) => ts(a.submittedAt) - ts(b.submittedAt));
+      removals.sort((a, b) => ts(a.submittedAt) - ts(b.submittedAt));
     } catch(e) {
       el.innerHTML = '<div class="no-pending">Could not load review queue.</div>'; return;
     }
