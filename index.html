@@ -2171,6 +2171,7 @@ async function loadAdminList() {
       <div class="pending-card-info">submitted by ${esc(s.submittedBy || 'unknown')}${s.submittedAt ? ' · ' + new Date(s.submittedAt.seconds ? s.submittedAt.seconds*1000 : s.submittedAt).toLocaleDateString() : ''}</div>
       ${s.description ? `<div class="pending-card-desc">${esc(s.description)}</div>` : ''}
       <div class="pending-actions">
+        <button class="accept-btn" onclick="markSuggestionAdded('${esc(s.id)}')">mark as added</button>
         <button class="reject-btn" onclick="rejectSuggestion('${esc(s.id)}')">reject</button>
       </div>
     </div>
@@ -2188,10 +2189,10 @@ async function loadAdminList() {
       ${r.reason ? `<div class="removal-reason"><span class="removal-reason-label">reason</span>${esc(r.reason)}</div>` : ''}
       <div class="pending-card-info">flagged by ${esc(r.submittedBy || 'unknown')}${r.submittedAt ? ' · ' + new Date(r.submittedAt.seconds ? r.submittedAt.seconds*1000 : r.submittedAt).toLocaleDateString() : ''}</div>
       <div class="removal-core-note">${r.core
-        ? 'Core library item — stays in the export manifest so the curator removes it from the source file.'
-        : 'Community submission — confirming deletes it from this browser immediately.'}</div>
+        ? 'Core library item — export it so the curator deletes it from the source file, then click “mark as removed” to clear it from this queue.'
+        : 'Community submission — “remove now” deletes it everywhere immediately.'}</div>
       <div class="pending-actions">
-        ${r.core ? '' : `<button class="confirm-remove-btn" onclick="confirmRemoval('${esc(r.id)}')">remove now</button>`}
+        <button class="confirm-remove-btn" onclick="confirmRemoval('${esc(r.id)}')">${r.core ? 'mark as removed' : 'remove now'}</button>
         <button class="keep-btn" onclick="dismissRemoval('${esc(r.id)}')">keep (dismiss flag)</button>
       </div>
     </div>
@@ -2294,6 +2295,20 @@ async function rejectSuggestion(id) {
     const arr = loadSuggestions();
     const idx = arr.findIndex(s => s.id === id);
     if (idx !== -1) { arr[idx].status = 'rejected'; saveSuggestions(arr); }
+  }
+  updatePendingCount();
+  loadAdminList();
+}
+
+// "mark as added" — the curator has added this to the library; clear it from the queue
+async function markSuggestionAdded(id) {
+  if (usingFirebase) {
+    try { await db.collection('connectome-hub-suggestions').doc(id).update({ status: 'accepted' }); }
+    catch(e) { alert('Error: ' + e.message); return; }
+  } else {
+    const arr = loadSuggestions();
+    const idx = arr.findIndex(s => s.id === id);
+    if (idx !== -1) { arr[idx].status = 'accepted'; saveSuggestions(arr); }
   }
   updatePendingCount();
   loadAdminList();
