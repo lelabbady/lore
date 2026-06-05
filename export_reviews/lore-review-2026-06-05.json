@@ -1,0 +1,28 @@
+{
+  "library": "LORE — Library Of Research Experiences",
+  "exportedAt": "2026-06-05T01:18:05.696Z",
+  "toAdd": [
+    {
+      "id": "LdiNbF6KCsbEGzafKF54",
+      "title": "Right Kind of Wrong: The Science of Failing Well",
+      "authors": "Amy C. Edmondson (Author)",
+      "type": "article",
+      "year": 2026,
+      "url": "https://www.amazon.com/Right-Kind-Wrong-Science-Failing/dp/1982195061",
+      "rawDescription": "Right Kind of Wrong: The Science of Failing Well [Edmondson, Amy C.] on Amazon.com. *FREE* shipping on qualifying offers. Right Kind of Wrong: The Science of Failing Well",
+      "submittedBy": "lively_gauss",
+      "submittedAt": "2026-06-05T01:16:31.000Z"
+    }
+  ],
+  "toRemove": [
+    {
+      "id": "GDueefv4ZqaJ7I8ehcM4",
+      "key": "how-to-change-your-mind",
+      "title": "How to Change Your Mind",
+      "reason": "unrelated",
+      "location": "core (source file)",
+      "flaggedBy": "lively_gauss",
+      "flaggedAt": "2026-06-05T01:17:39.000Z"
+    }
+  ]
+}
