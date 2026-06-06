@@ -938,6 +938,140 @@
     text-transform: lowercase; cursor: pointer; letter-spacing: 0.03em; border-radius: 0;
   }
   .keep-btn:hover { background: var(--muted); color: #fff; }
+
+  /* ── ADMIN: FEATURED EDITOR ───────────────────────────────────────── */
+  .admin-featured-editor {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--violet); padding: 16px 18px;
+    margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .admin-featured-hint { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+  .admin-featured-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .admin-featured-status { font-size: 0.75rem; color: var(--teal); font-weight: 600; }
+
+  /* ── HOME: FEATURED HERO ──────────────────────────────────────────── */
+  .featured {
+    display: flex;
+    gap: 24px;
+    background: var(--surface);
+    border-top: 3px solid var(--violet);
+    padding: 24px;
+    margin-bottom: 18px;
+  }
+  .featured[hidden] { display: none; }
+  .featured-img {
+    flex: 0 0 38%;
+    max-width: 38%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    background: var(--bg2);
+  }
+  .featured.no-img .featured-img { display: none; }
+  .featured-body { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .featured-kicker {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--violet);
+  }
+  .featured-title { font-size: 1.5rem; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; }
+  .featured-title a { color: var(--text); text-decoration: none; }
+  .featured-title a:hover { color: var(--violet); }
+  .featured-authors { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+  .featured-desc { font-size: 0.9rem; color: #333; line-height: 1.55; }
+  .featured-bookclub {
+    margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--bg2);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .featured-when { font-size: 0.82rem; color: var(--text); }
+  .featured-when strong { color: var(--maroon); }
+  .featured-note { font-size: 0.82rem; color: var(--muted); }
+  .featured-join {
+    align-self: flex-start; margin-top: 2px; padding: 7px 16px;
+    background: var(--blue); color: #fff; border: none;
+    font-family: inherit; font-size: 0.78rem; font-weight: 700;
+    text-transform: lowercase; letter-spacing: 0.03em; cursor: pointer;
+  }
+  .featured-join:hover { background: var(--violet); }
+
+  /* ── HOME: PREVIOUSLY FEATURED ARCHIVE STRIP ──────────────────────── */
+  .archive-strip { margin-bottom: 18px; }
+  .archive-strip[hidden] { display: none; }
+  .archive-strip-label {
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--light); margin-bottom: 8px;
+  }
+  .archive-strip-track { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .archive-chip {
+    flex: 0 0 auto; max-width: 260px; padding: 7px 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.12s; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .archive-chip:hover { border-color: var(--blue); }
+  .archive-chip .chip-month { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--light); }
+  .archive-chip .chip-title { font-size: 0.8rem; color: var(--text); }
+
+  /* ── HOME: TOP PICKS CAROUSEL ─────────────────────────────────────── */
+  .toppicks { margin-bottom: 22px; }
+  .toppicks[hidden] { display: none; }
+  .toppicks-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .toppicks-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+  .toppicks-sub { font-size: 0.72rem; color: var(--muted); }
+  .carousel-arrows { margin-left: auto; display: flex; gap: 6px; }
+  .carousel-arrow {
+    width: 28px; height: 28px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); cursor: pointer;
+    font-size: 1rem; line-height: 1; font-family: inherit;
+  }
+  .carousel-arrow:hover { border-color: var(--blue); color: var(--blue); }
+  .carousel-viewport { overflow: hidden; background: var(--surface); border-top: 3px solid var(--blue); }
+  .carousel-track { display: flex; transition: transform 0.45s ease; }
+  .tp-slide { flex: 0 0 100%; display: flex; gap: 22px; padding: 22px 24px; cursor: pointer; min-width: 0; }
+  .tp-thumb {
+    position: relative; flex: 0 0 200px; height: 150px; overflow: hidden;
+    background: var(--bg2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; padding: 14px; text-align: center; color: #fff;
+  }
+  .tp-thumb-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .tp-thumb-fallback .tp-fb-kicker { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.85; }
+  .tp-thumb-fallback .tp-fb-title { font-size: 0.95rem; font-weight: 700; line-height: 1.2; }
+  .tp-body { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .tp-rank { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ochre); }
+  .tp-title { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+  .tp-authors { font-size: 0.82rem; color: var(--muted); font-style: italic; }
+  .tp-desc { font-size: 0.85rem; color: #333; line-height: 1.5; }
+  .tp-endorse { font-size: 0.78rem; color: var(--teal); font-weight: 700; margin-top: auto; }
+  .carousel-dots { display: flex; gap: 7px; justify-content: center; margin-top: 12px; }
+  .carousel-dot {
+    width: 8px; height: 8px; border-radius: 50%; border: none;
+    background: var(--bg2); cursor: pointer; padding: 0;
+  }
+  .carousel-dot.active { background: var(--blue); }
+
+  /* ── HOME: BROWSE BY THEME ────────────────────────────────────────── */
+  .themes[hidden] { display: none; }
+  .theme-section { border-top: 1px solid var(--bg2); }
+  .theme-section > summary {
+    list-style: none; cursor: pointer; padding: 14px 2px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.95rem; font-weight: 700; color: var(--text);
+  }
+  .theme-section > summary::-webkit-details-marker { display: none; }
+  .theme-section > summary::before {
+    content: '\25B8'; color: var(--light); font-size: 0.8rem; transition: transform 0.15s;
+  }
+  .theme-section[open] > summary::before { transform: rotate(90deg); }
+  .theme-section .theme-count { font-size: 0.72rem; font-weight: 600; color: var(--light); }
+  .theme-section .grid { padding-bottom: 16px; }
+
+  /* ── NARROW SCREENS (first media query in the file) ───────────────── */
+  @media (max-width: 720px) {
+    .featured { flex-direction: column; }
+    .featured-img { flex-basis: auto; max-width: 100%; }
+    .tp-slide { flex-direction: column; gap: 14px; }
+    .tp-thumb { flex-basis: auto; width: 100%; height: 160px; }
+    .grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
@@ -959,6 +1093,32 @@
 
 <main>
   <div class="results-count" id="count"></div>
+
+  <!-- HOME-ONLY SECTIONS (hidden in search/filter mode) -->
+  <section class="featured" id="featured" hidden></section>
+
+  <section class="archive-strip" id="archive-strip" hidden>
+    <div class="archive-strip-label">previously featured</div>
+    <div class="archive-strip-track" id="archive-strip-track"></div>
+  </section>
+
+  <section class="toppicks" id="toppicks" hidden>
+    <div class="toppicks-head">
+      <span class="toppicks-title">top picks</span>
+      <span class="toppicks-sub">most endorsed by the team</span>
+      <div class="carousel-arrows">
+        <button class="carousel-arrow" id="tp-prev" aria-label="previous pick">&#8249;</button>
+        <button class="carousel-arrow" id="tp-next" aria-label="next pick">&#8250;</button>
+      </div>
+    </div>
+    <div class="carousel-viewport" id="tp-viewport">
+      <div class="carousel-track" id="tp-track"></div>
+    </div>
+    <div class="carousel-dots" id="tp-dots"></div>
+  </section>
+
+  <section class="themes" id="themes" hidden></section>
+
   <div class="grid" id="grid"></div>
   <div class="no-results" id="empty" style="display:none">No resources match your search. Try different keywords or filters.</div>
 </main>
@@ -1035,6 +1195,23 @@
         <button class="admin-close-btn" onclick="closeAdminPanel()">&#x2715; close</button>
       </div>
     </div>
+
+    <!-- FEATURED-OF-THE-MONTH EDITOR -->
+    <div class="admin-featured-editor" id="admin-featured-editor">
+      <div class="admin-section-title">featured this month</div>
+      <div class="admin-featured-hint">Spotlight one resource on the home page. Updates live for everyone — no code push.</div>
+      <select class="modal-select" id="feat-resource"><option value="">choose a resource…</option></select>
+      <input type="text" class="modal-input" id="feat-month" placeholder="month label — e.g. June 2026">
+      <input type="url" class="modal-input" id="feat-image" placeholder="image / cover URL (paste a link to an image)">
+      <input type="text" class="modal-input" id="feat-when" placeholder="book-club date/time — e.g. Fri June 27, noon, Room 2-150">
+      <textarea class="modal-textarea" id="feat-note" placeholder="note for the team (optional) — e.g. focus on chapters 1–3"></textarea>
+      <div class="admin-featured-actions">
+        <button class="accept-btn" onclick="saveFeatured()">publish featured</button>
+        <button class="keep-btn" onclick="clearFeatured()">clear featured</button>
+        <span class="admin-featured-status" id="feat-status"></span>
+      </div>
+    </div>
+
     <div id="admin-list"></div>
   </div>
 </div>
@@ -1389,6 +1566,13 @@ let fbAccepted = [];               // accepted community resources
 let fbDescs = {};                  // resourceKey -> edited summary
 let fbPendingRemovals = new Set(); // resourceKeys with a pending removal request
 let fbPendingSuggestions = 0;
+let fbFeatured = {};               // monthId -> featured doc
+let fbFeaturedCurrentId = null;    // which monthId is the live spotlight
+
+// Carousel state (Top Picks)
+let tpIndex = 0;
+let tpTimer = null;
+let tpCount = 0;
 
 // Stable per-browser identity so each browser counts once toward endorsements/flags
 function getClientId() {
@@ -1418,6 +1602,31 @@ function hasDescOverride(key) {
   return loadDescOverrides()[key] !== undefined;
 }
 
+// ── FEATURED-OF-THE-MONTH (shared via Firestore, localStorage fallback) ──
+function loadFeaturedLocal() {
+  return JSON.parse(localStorage.getItem('connectome-hub-featured') || '{}');
+}
+function getFeatured() {
+  if (usingFirebase) return fbFeaturedCurrentId ? (fbFeatured[fbFeaturedCurrentId] || null) : null;
+  const local = loadFeaturedLocal();
+  return local.current ? (local[local.current] || null) : null;
+}
+function getFeaturedArchive() {
+  let months, currentId;
+  if (usingFirebase) { months = fbFeatured; currentId = fbFeaturedCurrentId; }
+  else { const l = loadFeaturedLocal(); currentId = l.current; months = {}; Object.keys(l).forEach(k => { if (k !== 'current') months[k] = l[k]; }); }
+  return Object.keys(months)
+    .filter(id => id !== currentId)
+    .sort().reverse()
+    .map(id => months[id]);
+}
+
+// type -> present-participle for the featured headline
+function typeVerb(type) {
+  return { article: 'reading', book: 'reading', podcast: 'listening to',
+           documentary: 'watching', video: 'watching', talk: 'watching' }[type] || 'reading';
+}
+
 function resourceKey(r) {
   return r.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 }
@@ -1430,7 +1639,26 @@ document.addEventListener('DOMContentLoaded', () => {
   updatePendingCount();
   // Initialize suggest modal tab panel display
   switchSuggestTab('url');
+  wireCarousel();
 });
+
+// Wire Top Picks carousel controls once (handlers persist across re-renders)
+function wireCarousel() {
+  const prev = document.getElementById('tp-prev');
+  const next = document.getElementById('tp-next');
+  const dots = document.getElementById('tp-dots');
+  const view = document.getElementById('tp-viewport');
+  if (prev) prev.onclick = () => { goToSlide(tpIndex - 1); startCarousel(); };
+  if (next) next.onclick = () => { goToSlide(tpIndex + 1); startCarousel(); };
+  if (dots) dots.addEventListener('click', e => {
+    const dot = e.target.closest('.carousel-dot');
+    if (dot) { goToSlide(parseInt(dot.dataset.i, 10)); startCarousel(); }
+  });
+  if (view) {
+    view.addEventListener('mouseenter', stopCarousel);
+    view.addEventListener('mouseleave', startCarousel);
+  }
+}
 
 function buildFilters() {
   const tf = document.getElementById('type-filters');
@@ -1534,11 +1762,60 @@ function findResource(key) {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
+// Build a single resource card (shared by the search-mode grid and theme sections)
+function buildCard(r) {
+  const key     = resourceKey(r);
+  const liked   = isEndorsedByMe(key);
+  const flagged = isFlagged(key);
+  const endorsements = endorseCount(key);
+
+  const card = document.createElement('div');
+  card.className = 'card' + (flagged ? ' is-flagged' : '');
+  card.onclick = () => openSidebar(key);
+
+  const displayDesc = getDescription(key, r.description || '');
+
+  const titleHTML = r.url
+    ? `<a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${r.title}</a>`
+    : r.title;
+
+  const tagsHTML = r.tags.map(tag =>
+    `<span class="tag" onclick="event.stopPropagation(); searchTag('${tag}')">${tag}</span>`
+  ).join('');
+
+  card.innerHTML = `
+    <div class="card-top">
+      <span class="card-type ${typeClass(r.type)}">${typeLabel(r.type)}</span>
+      <span class="card-year">${r.year}</span>
+      ${flagged ? '<span class="flagged-badge">flagged</span>' : ''}
+    </div>
+    <div class="card-title">${titleHTML}</div>
+    ${r.authors ? `<div class="card-authors">${r.authors}</div>` : ''}
+    <div class="card-desc">${esc(displayDesc)}</div>
+    <div class="card-tags">${tagsHTML}</div>
+    <div class="card-actions">
+      <button class="action-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleLike('${key}')">
+        ${liked ? 'endorsed' : 'endorse'}${endorsements > 0 ? ' (' + endorsements + ')' : ''}
+      </button>
+      <button class="action-btn ${flagged ? 'flagged-btn-active' : ''}" onclick="event.stopPropagation(); toggleFlag('${key}')">
+        ${flagged ? 'unflag' : 'flag'}
+      </button>
+      <button class="action-btn" onclick="event.stopPropagation(); openSidebar('${key}')" style="margin-left:auto; color: var(--blue); border-color: var(--blue)">
+        discuss
+      </button>
+    </div>
+  `;
+  return card;
+}
+
 function render() {
   const q      = document.getElementById('search').value.toLowerCase().trim();
   const grid   = document.getElementById('grid');
   const emptyEl = document.getElementById('empty');
   const countEl = document.getElementById('count');
+
+  // Always clear any running carousel timer before we may rebuild it
+  stopCarousel();
 
   // Merge in any accepted community resources (shared store when Firebase is on)
   const communityRaw = loadAccepted();
@@ -1570,54 +1847,168 @@ function render() {
     (totalLikes  ? ` · ${totalLikes} endorsed` : '') +
     (flaggedCount && !showFlagged ? ` · ${flaggedCount} flagged (hidden)` : '');
 
-  grid.innerHTML = '';
+  // HOME MODE: nothing typed or toggled → curated landing sections.
+  // SEARCH MODE: any search/filter/sort/flag active → flat filtered grid.
+  const homeMode = !q && activeTypes.size === 0 && activeProjects.size === 0
+                   && !showFlagged && !sortByLikes;
 
+  ['featured', 'archive-strip', 'toppicks', 'themes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.hidden = !homeMode;
+  });
+
+  if (homeMode) {
+    grid.style.display = 'none';
+    grid.innerHTML = '';
+    emptyEl.style.display = 'none';
+    renderFeatured(allResources);
+    renderArchiveStrip();
+    renderTopPicks(allResources);
+    renderBrowseByTheme(filtered);
+    return;
+  }
+
+  grid.style.display = '';
+  grid.innerHTML = '';
   if (filtered.length === 0) { emptyEl.style.display = 'block'; return; }
   emptyEl.style.display = 'none';
+  filtered.forEach(r => grid.appendChild(buildCard(r)));
+}
 
-  filtered.forEach(r => {
-    const key     = resourceKey(r);
-    const liked   = isEndorsedByMe(key);
-    const flagged = isFlagged(key);
-    const endorsements = endorseCount(key);
+// ── HOME: FEATURED HERO ───────────────────────────────────────────────
+function renderFeatured(allResources) {
+  const el = document.getElementById('featured');
+  const f = getFeatured();
+  const r = f ? allResources.find(x => resourceKey(x) === f.resourceKey) : null;
 
-    const card = document.createElement('div');
-    card.className = 'card' + (flagged ? ' is-flagged' : '');
-    card.onclick = () => openSidebar(key);
+  if (!f || !r || isFlagged(f.resourceKey)) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.classList.toggle('no-img', !f.image);
 
-    const displayDesc = getDescription(key, r.description || '');
+  const key = f.resourceKey;
+  const desc = getDescription(key, r.description || '');
+  const titleHTML = r.url
+    ? `<a href="${r.url}" target="_blank" rel="noopener">${esc(r.title)}</a>`
+    : esc(r.title);
 
-    const titleHTML = r.url
-      ? `<a href="${r.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${r.title}</a>`
-      : r.title;
-
-    const tagsHTML = r.tags.map(tag =>
-      `<span class="tag" onclick="event.stopPropagation(); searchTag('${tag}')">${tag}</span>`
-    ).join('');
-
-    card.innerHTML = `
-      <div class="card-top">
-        <span class="card-type ${typeClass(r.type)}">${typeLabel(r.type)}</span>
-        <span class="card-year">${r.year}</span>
-        ${flagged ? '<span class="flagged-badge">flagged</span>' : ''}
+  el.innerHTML = `
+    ${f.image ? `<img class="featured-img" src="${esc(f.image)}" alt="" onerror="this.closest('.featured').classList.add('no-img')">` : ''}
+    <div class="featured-body">
+      <div class="featured-kicker">what we're ${typeVerb(r.type)} this month${f.month ? ' — ' + esc(f.month) : ''}</div>
+      <div class="featured-title">${titleHTML}</div>
+      ${r.authors ? `<div class="featured-authors">${esc(r.authors)}</div>` : ''}
+      ${desc ? `<div class="featured-desc">${esc(desc)}</div>` : ''}
+      <div class="featured-bookclub">
+        ${f.when ? `<div class="featured-when"><strong>discussion:</strong> ${esc(f.when)}</div>` : ''}
+        ${f.note ? `<div class="featured-note">${esc(f.note)}</div>` : ''}
+        <button class="featured-join" onclick="openSidebar('${key}')">join the discussion &rarr;</button>
       </div>
-      <div class="card-title">${titleHTML}</div>
-      ${r.authors ? `<div class="card-authors">${r.authors}</div>` : ''}
-      <div class="card-desc">${esc(displayDesc)}</div>
-      <div class="card-tags">${tagsHTML}</div>
-      <div class="card-actions">
-        <button class="action-btn ${liked ? 'liked' : ''}" onclick="event.stopPropagation(); toggleLike('${key}')">
-          ${liked ? 'endorsed' : 'endorse'}${endorsements > 0 ? ' (' + endorsements + ')' : ''}
-        </button>
-        <button class="action-btn ${flagged ? 'flagged-btn-active' : ''}" onclick="event.stopPropagation(); toggleFlag('${key}')">
-          ${flagged ? 'unflag' : 'flag'}
-        </button>
-        <button class="action-btn" onclick="event.stopPropagation(); openSidebar('${key}')" style="margin-left:auto; color: var(--blue); border-color: var(--blue)">
-          discuss
-        </button>
+    </div>
+  `;
+}
+
+// ── HOME: PREVIOUSLY FEATURED ARCHIVE STRIP ───────────────────────────
+function renderArchiveStrip() {
+  const el = document.getElementById('archive-strip');
+  const track = document.getElementById('archive-strip-track');
+  const archive = getFeaturedArchive();
+  if (!archive.length) { el.hidden = true; track.innerHTML = ''; return; }
+  el.hidden = false;
+  track.innerHTML = archive.map(a => `
+    <div class="archive-chip" onclick="openSidebar('${a.resourceKey}')">
+      <div class="chip-month">${esc(a.month || '')}</div>
+      <div class="chip-title">${esc(a.title || a.resourceKey)}</div>
+    </div>
+  `).join('');
+}
+
+// ── HOME: TOP PICKS CAROUSEL ──────────────────────────────────────────
+const TYPE_ACCENT = { article: 'var(--blue)', book: 'var(--violet)', podcast: 'var(--teal)',
+                      documentary: 'var(--maroon)', talk: 'var(--orange)', video: 'var(--ochre)' };
+
+function renderTopPicks(allResources) {
+  const el = document.getElementById('toppicks');
+  const track = document.getElementById('tp-track');
+  const dots = document.getElementById('tp-dots');
+
+  const visible = allResources.filter(r => !isFlagged(resourceKey(r)));
+  const ranked = [...visible].sort((a, b) => endorseCount(resourceKey(b)) - endorseCount(resourceKey(a)));
+  const picks = ranked.slice(0, 5);
+
+  if (!picks.length) { el.hidden = true; track.innerHTML = ''; dots.innerHTML = ''; tpCount = 0; return; }
+  el.hidden = false;
+
+  track.innerHTML = picks.map((r, i) => {
+    const key = resourceKey(r);
+    const n = endorseCount(key);
+    const accent = TYPE_ACCENT[r.type] || 'var(--blue)';
+    // Always render the typographic tile; overlay the image on top when present,
+    // so a broken/missing image URL gracefully reveals the tile underneath.
+    const thumb = `
+      <div class="tp-thumb tp-thumb-fallback" style="background:${accent}">
+        <span class="tp-fb-kicker">${typeLabel(r.type)}</span>
+        <span class="tp-fb-title">${esc(r.title)}</span>
+        ${r.image ? `<img class="tp-thumb-img" src="${esc(r.image)}" alt="" onerror="this.remove()">` : ''}
+      </div>`;
+    const desc = getDescription(key, r.description || '');
+    return `
+      <div class="tp-slide" onclick="openSidebar('${key}')">
+        ${thumb}
+        <div class="tp-body">
+          <div class="tp-rank">#${i + 1} top pick</div>
+          <div class="tp-title">${esc(r.title)}</div>
+          ${r.authors ? `<div class="tp-authors">${esc(r.authors)}</div>` : ''}
+          ${desc ? `<div class="tp-desc">${esc(desc)}</div>` : ''}
+          <div class="tp-endorse">${n ? '★ ' + n + ' endorsement' + (n !== 1 ? 's' : '') : 'be the first to endorse'}</div>
+        </div>
       </div>
     `;
-    grid.appendChild(card);
+  }).join('');
+
+  tpCount = picks.length;
+  tpIndex = 0;
+  track.style.transform = 'translateX(0%)';
+  dots.innerHTML = picks.map((_, i) =>
+    `<button class="carousel-dot${i === 0 ? ' active' : ''}" data-i="${i}" aria-label="pick ${i + 1}"></button>`
+  ).join('');
+
+  startCarousel();
+}
+
+function goToSlide(i) {
+  if (tpCount === 0) return;
+  tpIndex = (i % tpCount + tpCount) % tpCount;
+  const track = document.getElementById('tp-track');
+  if (track) track.style.transform = `translateX(${-tpIndex * 100}%)`;
+  document.querySelectorAll('#tp-dots .carousel-dot').forEach((d, idx) =>
+    d.classList.toggle('active', idx === tpIndex));
+}
+function startCarousel() {
+  stopCarousel();
+  if (tpCount <= 1) return;
+  tpTimer = setInterval(() => goToSlide(tpIndex + 1), 5000);
+}
+function stopCarousel() {
+  if (tpTimer) { clearInterval(tpTimer); tpTimer = null; }
+}
+
+// ── HOME: BROWSE BY THEME ─────────────────────────────────────────────
+function renderBrowseByTheme(filtered) {
+  const el = document.getElementById('themes');
+  el.innerHTML = '';
+  PROJECTS.forEach(p => {
+    const items = filtered.filter(r => r.projects.includes(p));
+    if (!items.length) return;
+    const details = document.createElement('details');
+    details.className = 'theme-section';
+    const summary = document.createElement('summary');
+    summary.innerHTML = `${esc(p)} <span class="theme-count">${items.length}</span>`;
+    details.appendChild(summary);
+    const g = document.createElement('div');
+    g.className = 'grid';
+    items.forEach(r => g.appendChild(buildCard(r)));
+    details.appendChild(g);
+    el.appendChild(details);
   });
 }
 
@@ -1701,6 +2092,15 @@ function subscribeShared() {
     fbPendingRemovals = new Set(s.docs.map(d => d.data().key));
     updatePendingCount(); render();
   }, e => console.warn('removals listener:', e));
+
+  db.collection('connectome-hub-featured').onSnapshot(s => {
+    fbFeatured = {};
+    s.forEach(d => {
+      if (d.id === '_current') { fbFeaturedCurrentId = d.data().monthId; return; }
+      fbFeatured[d.id] = d.data();
+    });
+    render();
+  }, e => console.warn('featured listener:', e));
 }
 
 // ── DESCRIPTION OVERRIDES ──────────────────────────────────────────────
@@ -2119,7 +2519,79 @@ const REMOVAL_MAP = {};
 function openAdminPanel() {
   document.getElementById('admin-panel').classList.add('open');
   document.body.style.overflow = 'hidden';
+  populateFeaturedEditor();
   loadAdminList();
+}
+
+// ── ADMIN: FEATURED-OF-THE-MONTH EDITOR ───────────────────────────────
+function populateFeaturedEditor() {
+  const sel = document.getElementById('feat-resource');
+  const all = [...RESOURCES, ...loadAccepted()];
+  const current = getFeatured();
+  sel.innerHTML = '<option value="">choose a resource…</option>' +
+    all.map(r => {
+      const k = resourceKey(r);
+      return `<option value="${esc(k)}">${esc(r.title)}</option>`;
+    }).join('');
+  // Prefill from the current featured pick
+  document.getElementById('feat-resource').value = current?.resourceKey || '';
+  document.getElementById('feat-month').value = current?.month || '';
+  document.getElementById('feat-image').value = current?.image || '';
+  document.getElementById('feat-when').value  = current?.when || '';
+  document.getElementById('feat-note').value  = current?.note || '';
+  document.getElementById('feat-status').textContent = '';
+}
+
+async function saveFeatured() {
+  const resourceKeyVal = document.getElementById('feat-resource').value;
+  const status = document.getElementById('feat-status');
+  if (!resourceKeyVal) { status.textContent = 'Pick a resource first.'; return; }
+
+  const all = [...RESOURCES, ...loadAccepted()];
+  const r = all.find(x => resourceKey(x) === resourceKeyVal);
+  const monthLabel = document.getElementById('feat-month').value.trim();
+  const monthId = monthLabel
+    ? monthLabel.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+    : new Date().toISOString().slice(0, 7);
+
+  const doc = {
+    monthId,
+    month: monthLabel,
+    resourceKey: resourceKeyVal,
+    title: r ? r.title : resourceKeyVal,
+    image: document.getElementById('feat-image').value.trim(),
+    when: document.getElementById('feat-when').value.trim(),
+    note: document.getElementById('feat-note').value.trim(),
+    updatedAt: Date.now()
+  };
+
+  if (usingFirebase) {
+    try {
+      await db.collection('connectome-hub-featured').doc(monthId).set(doc);
+      await db.collection('connectome-hub-featured').doc('_current').set({ monthId });
+    } catch(e) { status.textContent = 'Error: ' + e.message; return; }
+  } else {
+    const local = loadFeaturedLocal();
+    local[monthId] = doc;
+    local.current = monthId;
+    localStorage.setItem('connectome-hub-featured', JSON.stringify(local));
+    render();
+  }
+  status.textContent = '✓ published — live on the home page';
+}
+
+async function clearFeatured() {
+  const status = document.getElementById('feat-status');
+  if (usingFirebase) {
+    try { await db.collection('connectome-hub-featured').doc('_current').set({ monthId: '' }); }
+    catch(e) { status.textContent = 'Error: ' + e.message; return; }
+  } else {
+    const local = loadFeaturedLocal();
+    delete local.current;
+    localStorage.setItem('connectome-hub-featured', JSON.stringify(local));
+    render();
+  }
+  status.textContent = 'Cleared — no featured pick is shown (archive kept).';
 }
 function closeAdminPanel() {
   document.getElementById('admin-panel').classList.remove('open');
