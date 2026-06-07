@@ -1,0 +1,51 @@
+{
+  "library": "LORE — Library Of Research Experiences",
+  "exportedAt": "2026-06-07T01:02:08.091Z",
+  "toAdd": [
+    {
+      "id": "QH51UVqwnKOY5cDmjBSP",
+      "title": "Past Present and Future of the Human Genome Project",
+      "authors": "Apple Podcasts",
+      "type": "article",
+      "year": 2020,
+      "url": "https://podcasts.apple.com/us/podcast/past-present-and-future-of-the-human-genome-project/id1579023191?i=1000530493619",
+      "rawDescription": "Podcast Episode · Genetics Unzipped · October 22, 2020 · 31m",
+      "submittedBy": "lively_gauss",
+      "submittedAt": "2026-06-06T23:18:57.000Z"
+    },
+    {
+      "id": "Y2BzEZvan4ktGEZYazWZ",
+      "title": "The ambitious mission of cracking the human genome",
+      "authors": "Spark",
+      "type": "documentary",
+      "year": 2026,
+      "url": "https://www.youtube.com/watch?v=dS1sxIPWdww",
+      "rawDescription": "",
+      "submittedBy": "lively_gauss",
+      "submittedAt": "2026-06-06T22:57:21.000Z"
+    },
+    {
+      "id": "e5lMOEOrjWnA9MyRXrUs",
+      "title": "let there be light",
+      "authors": "gravitas documentares",
+      "type": "documentary",
+      "year": 2017,
+      "url": "https://www.youtube.com/watch?v=tPxx5IV8fFo&t=164s",
+      "rawDescription": "",
+      "submittedBy": "lively_gauss",
+      "submittedAt": "2026-06-06T22:47:51.000Z"
+    },
+    {
+      "id": "nH5w7ecJpMCK2qooF3Wm",
+      "title": "Higgs Boson",
+      "authors": "Apple Podcasts",
+      "type": "article",
+      "year": 2024,
+      "url": "https://podcasts.apple.com/us/podcast/higgs-boson/id343580439?i=1000645181851",
+      "rawDescription": "Podcast Episode · The Infinite Monkey Cage · March 20, 2024 · 42m",
+      "submittedBy": "lively_gauss",
+      "submittedAt": "2026-06-06T23:12:49.000Z"
+    }
+  ],
+  "toRemove": []
+}
